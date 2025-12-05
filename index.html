@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Application de Suivi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* Style pour masquer proprement */
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 h-screen flex overflow-hidden font-sans">
+
+    <div id="auth-overlay" class="fixed inset-0 z-[100] bg-gray-800/90 backdrop-blur-sm flex items-center justify-center transition-opacity duration-500">
+        <div class="bg-white p-10 rounded-xl shadow-2xl w-full max-w-[400px] relative border border-gray-200">
+            
+            <div class="flex flex-col items-center mb-8">
+                <div class="w-40 h-auto mb-6 flex items-center justify-center">
+                    <img src="Logo.png" alt="Logo SGS" class="object-contain w-full">
+                </div>
+                <h2 class="text-xl font-bold text-gray-800 tracking-tight uppercase">Espace Sécurisé</h2>
+                <div class="h-1 w-12 bg-[#F58220] mt-4 rounded-full"></div>
+            </div>
+
+            <form id="loginForm" class="space-y-5">
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">Identifiant</label>
+                    <div class="relative group">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="ph ph-user text-gray-400 group-focus-within:text-[#F58220] transition-colors"></i>
+                        </div>
+                        <input type="email" id="auth-email" class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#F58220] focus:border-[#F58220] sm:text-sm transition-all bg-gray-50 focus:bg-white" placeholder="Email professionnel" required>
+                    </div>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">Mot de passe</label>
+                    <div class="relative group">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="ph ph-lock text-gray-400 group-focus-within:text-[#F58220] transition-colors"></i>
+                        </div>
+                        <input type="password" id="auth-password" class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#F58220] focus:border-[#F58220] sm:text-sm transition-all bg-gray-50 focus:bg-white" placeholder="••••••••" required>
+                    </div>
+                </div>
+
+                <div id="auth-error" class="hidden animate-pulse">
+                    <div class="flex items-center gap-2 text-red-600 text-xs font-bold bg-red-50 p-3 rounded-lg border border-red-100">
+                        <i class="ph ph-warning-circle text-lg"></i>
+                        <span>Identifiants incorrects</span>
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-[#F58220] hover:bg-[#d1650b] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#F58220] transition-all active:scale-[0.98]">
+                    <span id="btn-text">SE CONNECTER</span>
+                    <i id="btn-spinner" class="ph ph-spinner animate-spin hidden ml-2"></i>
+                </button>
+            </form>
+
+            <div class="mt-8 text-center border-t border-gray-100 pt-4">
+                <p class="text-xs text-gray-400">Application interne &copy; 2025</p>
+            </div>
+        </div>
+    </div>
+    
+    <aside class="w-64 bg-white border-r border-gray-200 flex flex-col z-10 shadow-sm">
+        <div class="p-6 flex justify-center border-b border-gray-100">
+            <div class="w-40 h-40 rounded-xl overflow-hidden flex items-center justify-center bg-white p-2 transition-transform hover:scale-105">
+                <img src="Logo.png" alt="Logo" class="w-full h-full object-contain">
+            </div>
+        </div>
+        
+        <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
+
+            <button onclick="navigate('entry')" id="btn-entry" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl hover:bg-gray-50 text-[#9fa0a2] transition-colors">
+                <i class="ph ph-phone-plus text-lg"></i> Nouvel Appel
+            </button>
+            <button onclick="navigate('dashboard')" id="btn-dashboard" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl hover:bg-gray-50 text-[#9fa0a2] transition-colors">
+                <i class="ph ph-chart-pie-slice text-lg"></i> Tableau de Bord
+            </button>
+            <button onclick="navigate('history')" id="btn-history" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl hover:bg-gray-50 text-[#9fa0a2] transition-colors">
+                <i class="ph ph-clock-counter-clockwise text-lg"></i> Historique
+            </button>
+
+        </nav>
+        <div class="p-4 border-t border-gray-100">
+            <button id="logout-btn" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl hover:bg-red-50 text-red-500 transition-colors border border-transparent hover:border-red-100">
+                <i class="ph ph-sign-out text-lg"></i> Déconnexion
+            </button>
+        </div>
+    </aside>
+
+    <div class="hidden bg-white p-4 flex justify-between items-center border-b border-gray-200 sticky top-0 z-20 blur-sm pointer-events-none transition-all duration-300">
+        <img src="logo.png" alt="Logo" class="h-8 w-auto">
+        <button id="mobile-menu-trigger" class="p-2 text-gray-600 rounded-lg hover:bg-gray-100">
+            <i class="ph ph-list text-2xl"></i>
+        </button>
+    </div>
+
+    <div id="mobile-sidebar" class="fixed inset-0 z-30 hidden">
+        <div class="absolute inset-0 bg-black/50" onclick="toggleMobileMenu()"></div>
+        <aside class="absolute left-0 top-0 bottom-0 w-64 bg-white shadow-xl flex flex-col">
+            <div class="p-6 flex justify-between items-center border-b border-gray-100">
+                <span class="font-bold text-lg text-[#F58220]">Menu</span>
+                <button onclick="toggleMobileMenu()"><i class="ph ph-x text-xl"></i></button>
+            </div>
+            <nav class="flex-1 p-4 space-y-2">
+                <button onclick="navigate('entry');toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-gray-600 hover:bg-gray-50"><i class="ph ph-phone-plus text-lg"></i> Nouvel Appel</button>
+                <button onclick="navigate('dashboard');toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-gray-600 hover:bg-gray-50"><i class="ph ph-chart-pie-slice text-lg"></i> Tableau de Bord</button>
+                <button onclick="navigate('history');toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-gray-600 hover:bg-gray-50"><i class="ph ph-clock-counter-clockwise text-lg"></i> Historique</button>
+                <button id="mobile-logout-btn" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-red-500 hover:bg-red-50 mt-4"><i class="ph ph-sign-out text-lg"></i> Déconnexion</button>
+            </nav>
+        </aside>
+    </div>
+
+    <main class="flex-1 flex flex-col h-full relative bg-gray-50/50 blur-sm pointer-events-none transition-all duration-300">
+        <div id="app-content" class="flex-1 overflow-y-auto p-4 md:p-8"></div>
+    </main>
+
+    <div id="detailModal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center fade-in backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden border border-gray-200">
+            <div class="bg-[#F58220] p-4 flex justify-between items-center text-white">
+                <h3 class="font-bold text-lg flex items-center gap-2"><i class="ph ph-file-text"></i> Détail du Dossier</h3>
+                <button onclick="closeDetail()" class="hover:bg-white/20 rounded-full p-1 transition"><i class="ph ph-x text-xl"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div class="flex justify-between items-start border-b border-gray-100 pb-4">
+                    <div>
+                        <p class="text-xs font-bold text-gray-400 uppercase">Client / Centre</p>
+                        <p class="font-bold text-xl text-[#76787B]" id="modal-client">-</p>
+                        <p class="text-sm font-mono text-[#F58220]" id="modal-code">-</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xs font-bold text-gray-400 uppercase">Date & Agent</p>
+                        <p class="font-bold text-gray-800" id="modal-date">-</p>
+                        <p class="text-xs text-gray-500 italic mt-1" id="modal-agent">-</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><p class="text-xs font-bold text-gray-400 uppercase">Catégorie</p><p class="font-medium text-gray-700" id="modal-cat">-</p></div>
+                    <div><p class="text-xs font-bold text-gray-400 uppercase">Sous-catégorie</p><p class="font-medium text-gray-700" id="modal-sub">-</p></div>
+                </div>
+                <div class="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                    <p class="text-xs font-bold text-[#F58220] uppercase mb-2 flex items-center gap-1"><i class="ph ph-note-pencil"></i> Compte Rendu</p>
+                    <p class="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap" id="modal-cr">Aucun contenu.</p>
+                </div>
+            </div>
+            <div class="p-4 bg-gray-50 border-t border-gray-100 text-right">
+                <button onclick="closeDetail()" class="px-6 py-2 bg-gray-200 text-gray-700 font-bold rounded-lg hover:bg-gray-300 transition">Fermer</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration Globale
+        const CATEGORIES = {"Adelsoft": ["-"], "Agenda": ["-"], "Pilote": ["-"], "Box Marketing": ["-"]};
+        const CENTRES_DB = {}; 
+        
+        let calls = [];
+        let currentUser = null;
+
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-sidebar');
+            if(menu) menu.classList.toggle('hidden');
+        }
+        document.getElementById('mobile-menu-trigger')?.addEventListener('click', toggleMobileMenu);
+
+        // --- NAVIGATION ---
+        function navigate(view) {
+            const container = document.getElementById('app-content');
+            ['entry', 'dashboard', 'history'].forEach(id => {
+                const btn = document.getElementById('btn-' + id);
+                if (btn) {
+                     if (id === view) btn.className = "w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl bg-[#fef8f3] text-[#F58220] transition-colors";
+                     else btn.className = "w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl hover:bg-gray-50 text-[#9fa0a2] transition-colors";
+                }
+            });
+
+            if(view === 'entry') { container.innerHTML = renderEntry(); if(window.preloadCentresData) window.preloadCentresData(); }
+            else if(view === 'dashboard') {
+                container.innerHTML = renderDashboard();
+                initDashboardCharts();
+            } else if(view === 'history') container.innerHTML = renderHistory();
+
+        }
+
+        // --- LOGIQUE MÉTIER ---
+        async function checkCentre(code) {
+            const cleanCode = (code || document.getElementById('code-centre').value).trim().toUpperCase().split('.')[0];
+            const fields = ['reseau', 'client', 'adresse', 'cp', 'ville', 'tel', 'email', 'dirigeant', 'exploitant', 'rr', 'auditeur'];
+            
+            // Reset des champs avant recherche
+            fields.forEach(f => {
+                const el = document.getElementById('field_' + f);
+                if(el) el.value = "";
+            });
+            
+            // Pas de recherche si moins de 3 caractères
+            if (cleanCode.length < 3) return;
+
+            let data = null;
+
+            // 1. Recherche Locale (Backup immédiat)
+            if(CENTRES_DB[cleanCode]) {
+                data = CENTRES_DB[cleanCode];
+            }
+            
+            // 2. Recherche Firestore (Prioritaire si connecté)
+            if(typeof doc === 'function' && typeof getDoc === 'function' && currentUser) {
+                try {
+                    const appIdRef = typeof appId !== 'undefined' ? appId : 'centre-appels';
+                    const docRef = doc(db, 'artifacts', appIdRef, 'public', 'data', 'centres', cleanCode);
+                    const docSnap = await getDoc(docRef);
+                    
+                    if (docSnap.exists()) {
+                        data = docSnap.data();
+                        console.log("Données trouvées dans Firestore pour", cleanCode);
+                    }
+                } catch (e) {
+                    console.log("Erreur/Offline Firestore search:", e);
+                }
+            }
+
+            // Remplissage du formulaire
+            if(data) {
+                fields.forEach(f => {
+                    const el = document.getElementById('field_' + f);
+                    if(el) {
+                        const key = f === 'client' ? 'nom' : f;
+                        if(data[key]) el.value = data[key];
+                    }
+                });
+                
+                // Appel auto des infos dirigeant
+                if(data.dirigeant) loadDirigeantInfo(data.dirigeant);
+                else document.getElementById('dirigeant-info-box')?.classList.add('hidden');
+            }
+        }
+
+        function exportCSV() {
+            if (!calls || calls.length === 0) { alert("Aucune donnée à exporter."); return; }
+            const headers = ["Date", "Agent", "Code Centre", "Nom Client", "Catégorie", "Sous-catégorie", "Statut", "Compte Rendu"];
+            const csvRows = [headers.join(";")];
+            calls.forEach(c => {
+                const clean = (text) => (text || "").toString().replace(/;/g, ",").replace(/[\r\n]+/gm, " ");
+                const row = [c.dateCall, clean(c.agentEmail), c.code, clean(c.client), clean(c.cat), clean(c.sub), clean(c.status || c.statut), clean(c.cr)];
+                csvRows.push(row.join(";"));
+            });
+            const blob = new Blob(["\uFEFF" + csvRows.join("\n")], { type: "text/csv;charset=utf-8;" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "export_calltrack_collab.csv";
+            link.click();
+        }
+
+        // --- VUES (Templates) ---
+
+        // --- VUE CENTRES ---
+
+    function renderEntry() {
+        return `
+        <div id="view-entry" class="fade-in max-w-6xl mx-auto pb-20">
+            <h2 class="text-2xl font-bold text-[#F58220] mb-6 flex items-center gap-2">
+                <i class="ph ph-phone-outgoing"></i> Nouvel Appel
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-4 mb-6">
+                
+                <div class="md:col-span-7 bg-white p-6 rounded-2xl shadow-sm border border-orange-100 flex flex-col justify-between">
+                    <div>
+                        <label class="block text-xs font-bold text-orange-400 uppercase mb-2">1. RECHERCHE CODE CENTRE</label>
+                        <div class="relative w-full">
+                            <i class="ph ph-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xl"></i>
+                            <input type="text" id="code-centre" 
+                                class="w-full pl-12 pr-12 py-3 bg-orange-50/50 border-2 border-orange-100 rounded-xl focus:border-[#F58220] focus:bg-white outline-none font-bold text-lg text-gray-700 transition-all placeholder-orange-200 uppercase"
+                                placeholder="Code ou Nom..." 
+                                autocomplete="off"
+                                onkeyup="filterCentres(this.value)" 
+                                onfocus="filterCentres(this.value)">
+                            
+                            <button onclick="resetForm()" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-red-400 p-1"><i class="ph ph-x-circle text-xl"></i></button>
+
+                            <div id="suggestions-box" class="hidden absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-100 max-h-60 overflow-y-auto z-50 divide-y divide-gray-50"></div>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-3"><i class="ph ph-info"></i> Affiche toutes les fiches (Centre, Dirigeant, CR).</p>
+                </div>
+
+                <div class="md:col-span-5 bg-white p-6 rounded-2xl shadow-sm border border-gray-200 flex flex-col justify-between relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-16 h-16 bg-gray-50 rounded-bl-full -mr-8 -mt-8 z-0"></div>
+                    <div class="relative z-10">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">OU 2. CONTACT EXTERNE</label>
+                        <div class="relative">
+                            <i class="ph ph-address-book absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xl"></i>
+                            <select id="contact-externe-select" onchange="handleExternalContact(this.value)" class="w-full pl-12 pr-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl focus:border-gray-400 outline-none font-bold text-gray-700 appearance-none cursor-pointer hover:bg-white transition-colors">
+                                <option value="">-- Sélectionner --</option>
+                                <option value="RR">Responsable Régional (RR)</option>
+                                <option value="Particulier">Particulier</option>
+                                <option value="Prestataire">Prestataire</option>
+                                <option value="Démarchage">Démarchage</option>
+                                <option value="Autre">Autre</option>
+                            </select>
+                            <i class="ph ph-caret-down absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-3"><i class="ph ph-eye-slash"></i> Masque les infos centre, affiche uniquement le CR.</p>
+                </div>
+            </div>
+
+            <form id="callForm" class="space-y-6">
+                
+                <div id="section-centre-info" class="hidden bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden group hover:shadow-md transition-shadow">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-[#F58220]"></div>
+                    <h3 class="text-[#F58220] font-bold text-sm uppercase mb-4 flex items-center gap-2">
+                        <i class="ph ph-storefront text-xl"></i> Informations du Centre
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div><label class="section-title">Réseau</label><input id="field_reseau" readonly class="w-full p-3 rounded-lg border bg-gray-50 font-bold text-gray-700"></div>
+                        <div><label class="section-title">Nom Commercial</label><input id="field_client" readonly class="w-full p-3 rounded-lg border bg-gray-50 font-bold text-gray-700"></div>
+                        <div class="md:col-span-2"><label class="section-title">Adresse</label><input id="field_adresse" readonly class="w-full p-3 rounded-lg border bg-gray-50 text-gray-600"></div>
+                        <div class="flex gap-4 md:col-span-2">
+                            <div class="w-32"><label class="section-title">CP</label><input id="field_cp" readonly class="w-full p-3 rounded-lg border bg-gray-50 text-gray-600"></div>
+                            <div class="flex-1"><label class="section-title">Ville</label><input id="field_ville" readonly class="w-full p-3 rounded-lg border bg-gray-50 font-bold text-gray-700"></div>
+                        </div>
+                        <div><label class="section-title">Téléphone</label><input id="field_telephone" readonly class="w-full p-3 rounded-lg border bg-gray-50 text-gray-800 font-mono"></div>
+                        <div><label class="section-title">Email</label><input id="field_email" readonly class="w-full p-3 rounded-lg border bg-gray-50 text-blue-600 truncate"></div>
+                    </div>
+                </div>
+
+                <div id="section-dirigeants" class="hidden bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden group hover:shadow-md transition-shadow">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
+                    <h3 class="text-blue-600 font-bold text-sm uppercase mb-4 flex items-center gap-2">
+                        <i class="ph ph-users-three text-xl"></i> Dirigeants & Responsables
+                    </h3>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="md:col-span-2 bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+                            <label class="text-xs font-bold text-blue-400 uppercase mb-1 block">Dirigeant</label>
+                            <div class="flex items-center gap-3 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold"><i class="ph ph-user-crown text-xl"></i></div>
+                                <input id="field_dirigeant" readonly class="flex-1 p-3 bg-white border-0 rounded-xl shadow-sm font-bold text-blue-900 placeholder-blue-200" placeholder="Nom du dirigeant">
+                            </div>
+                            <div id="dirigeant-info-box" class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2 hidden border-t border-blue-100 pt-3">
+                                <input id="dir_mobile" readonly class="w-full p-2 text-sm bg-white rounded-lg border border-blue-100 text-blue-800 font-mono" placeholder="Mobile">
+                                <input id="dir_email" readonly class="w-full p-2 text-sm bg-white rounded-lg border border-blue-100 text-blue-800" placeholder="Email">
+                                <input id="dir_adresse" readonly class="md:col-span-2 w-full p-2 text-sm bg-white rounded-lg border border-blue-100 text-blue-800" placeholder="Adresse">
+                            </div>
+                        </div>
+                        <div><label class="section-title">Exploitant</label><input id="field_exploitant" readonly class="w-full p-3 rounded-lg border bg-gray-50 text-gray-700"></div>
+                        <div><label class="section-title">Resp. Régional (RR)</label><input id="field_rr" readonly class="w-full p-3 rounded-lg border bg-gray-50 text-gray-700"></div>
+                        <div class="md:col-span-2"><label class="section-title">Auditeur</label><input id="field_auditeur" readonly class="w-full p-3 rounded-lg border bg-gray-50 text-gray-700"></div>
+                    </div>
+                </div>
+
+                <div id="section-cr" class="hidden bg-gray-50 p-6 rounded-2xl border border-gray-200">
+                    <h3 class="text-gray-500 font-bold text-sm uppercase mb-4 flex items-center gap-2">
+                        <i class="ph ph-notepad"></i> Compte-Rendu
+                    </h3>
+                    
+                    <div class="mb-4">
+                        <label class="section-title">Statut de l'appel</label>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
+                            <label class="cursor-pointer">
+                                <input type="radio" name="status" value="Clôturé" class="peer hidden" checked>
+                                <div class="p-3 text-center rounded-xl bg-white border hover:bg-green-50 peer-checked:bg-green-500 peer-checked:text-white peer-checked:border-green-500 transition-all font-bold text-sm">Clôturé</div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="status" value="En cours" class="peer hidden">
+                                <div class="p-3 text-center rounded-xl bg-white border hover:bg-blue-50 peer-checked:bg-blue-500 peer-checked:text-white peer-checked:border-blue-500 transition-all font-bold text-sm">En cours</div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="status" value="À traiter" class="peer hidden">
+                                <div class="p-3 text-center rounded-xl bg-white border hover:bg-orange-50 peer-checked:bg-orange-400 peer-checked:text-white peer-checked:border-orange-400 transition-all font-bold text-sm">À traiter</div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="status" value="À rappeler" class="peer hidden">
+                                <div class="p-3 text-center rounded-xl bg-white border hover:bg-red-50 peer-checked:bg-red-500 peer-checked:text-white peer-checked:border-red-500 transition-all font-bold text-sm">À Rappeler</div>
+                            </label>
+                        </div>
+                    </div>
+
+
+                    <div>
+                        <label class="section-title">Commentaire</label>
+                        <textarea id="commentaire" rows="3" class="w-full p-4 rounded-xl border-gray-200 border focus:border-[#F58220] focus:ring-1 focus:ring-orange-200 outline-none transition-all resize-none" placeholder="Détails de l'échange..."></textarea>
+                    </div>
+                </div>
+
+                <button id="btn-submit" type="submit" class="hidden w-full bg-[#F58220] text-white py-4 rounded-xl font-bold text-lg hover:bg-[#d9731c] transition-transform active:scale-[0.99] shadow-xl shadow-orange-100 flex justify-center items-center gap-2">
+                    <i class="ph ph-floppy-disk"></i> Enregistrer l'Appel
+                </button>
+            </form>
+        </div>
+        `;
+    }
+
+        function renderDashboard() {
+            const totalCalls = calls.length;
+            const statusStats = { "Clôturé": 0, "En cours": 0, "À traiter": 0, "À rappeler": 0 };
+            calls.forEach(c => { const s = c.status || c.statut; if(statusStats[s] !== undefined) statusStats[s]++; });
+            
+            return `
+                <div class="fade-in space-y-6">
+                    <h2 class="text-2xl font-bold text-[#76787B]">Tableau de Bord Global</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-green-500">
+                            <p class="text-xs text-gray-400 uppercase font-bold">Clôturés</p><p class="text-3xl font-bold text-gray-800">${statusStats['Clôturé']}</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-blue-500">
+                            <p class="text-xs text-gray-400 uppercase font-bold">En cours</p><p class="text-3xl font-bold text-gray-800">${statusStats['En cours']}</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-orange-400">
+                            <p class="text-xs text-gray-400 uppercase font-bold">À Traiter</p><p class="text-3xl font-bold text-gray-800">${statusStats['À traiter']}</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-red-400">
+                            <p class="text-xs text-gray-400 uppercase font-bold">À Rappeler</p><p class="text-3xl font-bold text-gray-800">${statusStats['À rappeler']}</p>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <h3 class="font-bold text-gray-700 mb-4">Répartition des Statuts</h3>
+                        <div class="h-64"><canvas id="chartStatus"></canvas></div>
+                    </div>
+                </div>`;
+        }
+
+        function initDashboardCharts() {
+            const statusData = [
+                calls.filter(c => (c.status || c.statut) === 'Clôturé').length,
+                calls.filter(c => (c.status || c.statut) === 'En cours').length,
+                calls.filter(c => (c.status || c.statut) === 'À traiter').length,
+                calls.filter(c => (c.status || c.statut) === 'À rappeler').length
+            ];
+            new Chart(document.getElementById('chartStatus'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Clôturé', 'En cours', 'À traiter', 'À rappeler'],
+                    datasets: [{
+                        data: statusData,
+                        backgroundColor: ['#22c55e', '#3b82f6', '#fb923c', '#f87171'],
+                        borderWidth: 0
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '70%' }
+            });
+        }
+
+        function renderHistory() {
+            // Tri par date décroissante
+            const rows = calls.sort((a,b) => (a.dateCall < b.dateCall ? 1 : -1)).map(c => `
+                <tr class="border-b last:border-0 hover:bg-gray-50 transition group">
+                    <td class="p-3 font-mono text-xs text-gray-500">${c.dateCall}</td>
+                    <td class="p-3 font-bold text-gray-700 text-sm">${c.code}</td>
+                    <td class="p-3"><div class="font-bold text-[#76787B] text-sm truncate w-32 md:w-auto">${c.client}</div></td>
+                    <td class="p-3 text-xs hidden md:table-cell text-gray-500">${c.agentEmail || 'Inconnu'}</td>
+                    <td class="p-3 text-sm hidden md:table-cell"><span class="px-2 py-1 rounded bg-orange-50 text-orange-700 text-xs">${c.cat}</span></td>
+                    <td class="p-3"><span class="px-2 py-1 rounded-full text-xs font-bold ${(c.status || c.statut) === 'Clôturé' ? 'bg-green-100 text-green-700' : (c.status || c.statut) === 'À rappeler' ? 'bg-red-100 text-red-700' : (c.status || c.statut) === 'À traiter' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}">${c.status || c.statut}</span></td>
+                    <td class="p-3 text-right"><button onclick="openDetail('${c.firestoreId}')" class="p-2 bg-gray-100 hover:bg-[#F58220] hover:text-white rounded-lg transition"><i class="ph ph-eye text-lg"></i></button></td>
+                </tr>
+            `).join('');
+
+            return `
+                <div class="fade-in">
+                    <div class="flex justify-between items-end mb-6">
+                        <div><h2 class="text-2xl font-bold text-[#76787B]">Historique Global</h2><p class="text-sm text-gray-400">Tous les appels de l'équipe</p></div>
+                        <button onclick="exportCSV()" class="px-4 py-2 bg-white border rounded-lg text-sm hover:bg-gray-50"><i class="ph ph-download-simple"></i> Export</button>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left whitespace-nowrap">
+                                <thead class="bg-gray-50 text-xs font-bold text-gray-400 uppercase border-b">
+                                    <tr><th class="p-3">Date</th><th class="p-3">Code</th><th class="p-3">Client</th><th class="p-3 hidden md:table-cell">Agent</th><th class="p-3 hidden md:table-cell">Catégorie</th><th class="p-3">Statut</th><th class="p-3 text-right">Action</th></tr>
+                                </thead>
+                                <tbody>${rows || '<tr><td colspan="7" class="p-6 text-center italic">Aucun appel enregistré.</td></tr>'}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>`;
+        }
+
+        function openDetail(firestoreId) {
+            const call = calls.find(c => c.firestoreId === firestoreId);
+            if(!call) return;
+            
+            document.getElementById('modal-client').innerText = call.client || '-';
+            document.getElementById('modal-code').innerText = call.code || '-';
+            document.getElementById('modal-date').innerText = call.dateCall || '-';
+            document.getElementById('modal-agent').innerText = `Traité par : ${call.agentEmail || 'Inconnu'}`;
+            document.getElementById('modal-cat').innerText = call.cat || '-';
+            document.getElementById('modal-sub').innerText = call.sub || '-';
+            document.getElementById('modal-cr').innerText = call.cr || "Aucune note.";
+            
+            const modal = document.getElementById('detailModal');
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.querySelector('div').classList.remove('scale-95', 'opacity-0'), 10);
+        }
+
+        function closeDetail() {
+            const modal = document.getElementById('detailModal');
+            modal.querySelector('div').classList.add('scale-95', 'opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 200);
+        }
+    </script>
+
+    <script type="module">
+
+    // --- IMPORTS FIREBASE ---
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
+    import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, setPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, collection, addDoc, setDoc, getDoc, getDocs, doc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    
+    const firebaseConfig = {
+          apiKey: "AIzaSyDHljgMTJUNFxixyGCNmHa5x3C50pC3S2w",
+          authDomain: "centre-appels.firebaseapp.com",
+          projectId: "centre-appels",
+          storageBucket: "centre-appels.firebasestorage.app",
+          messagingSenderId: "127271081032",
+          appId: "1:127271081032:web:782416a501242cd353f47d",
+          measurementId: "G-R28JM1CJEX"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const auth = getAuth(app);
+
+    // --- PERSISTANCE SESSION ---
+    setPersistence(auth, browserSessionPersistence)
+      .then(() => {
+         console.log("Mode de persistance : SESSION");
+      })
+      .catch((error) => {
+        console.error("Erreur persistance :", error);
+      });
+        const db = getFirestore(app);
+        const appId = 'centre-appels'; 
+        
+        // Exposition de db et appId à la portée globale
+        window.db = db;
+        window.appId = appId;
+        window.doc = doc;
+        window.getDoc = getDoc;
+        window.getDocs = getDocs;
+        window.collection = collection;
+
+        // Éléments UI
+        const authOverlay = document.getElementById('auth-overlay');
+        const loginForm = document.getElementById('loginForm');
+        const errorMsg = document.getElementById('auth-error');
+        const btnText = document.getElementById('btn-text');
+        const btnSpinner = document.getElementById('btn-spinner');
+        const userDisplay = document.getElementById('user-display');
+        const appElements = document.querySelectorAll('body > aside, body > .sticky, body > #mobile-sidebar, body > main');
+
+        // Gestion de l'état de connexion
+        onAuthStateChanged(auth, (user) => {
+            if (user) { 
+                if(window.preloadCentresData) window.preloadCentresData();
+                currentUser = user;
+                if(userDisplay) userDisplay.textContent = user.email;
+                toggleAppVisibility(true);
+                startFirestoreListener();
+            } else {
+                currentUser = null;
+                toggleAppVisibility(false);
+            }
+        });
+
+        // Toggle UI
+        function toggleAppVisibility(show) {
+            if(show) {
+                authOverlay.classList.add('hidden');
+                appElements.forEach(el => el.classList.remove('blur-sm', 'pointer-events-none'));
+            } else {
+                authOverlay.classList.remove('hidden');
+                appElements.forEach(el => el.classList.add('blur-sm', 'pointer-events-none'));
+            }
+        }
+
+        // Login Manuel
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+
+            errorMsg.classList.add('hidden');
+            btnText.innerText = "Connexion...";
+            btnSpinner.classList.remove('hidden');
+
+            signInWithEmailAndPassword(auth, email, password)
+                .catch((error) => {
+                    let msg = "Erreur de connexion.";
+                    if(error.code.includes('invalid-credential') || error.code.includes('wrong-password')) msg = "Identifiants incorrects.";
+                    errorMsg.innerText = msg;
+                    errorMsg.classList.remove('hidden');
+                })
+                .finally(() => {
+                    btnText.innerText = "Se connecter";
+                    btnSpinner.classList.add('hidden');
+                });
+        });
+
+        // Logout
+        document.getElementById('logout-btn').onclick = () => signOut(auth);
+        document.getElementById('mobile-logout-btn').onclick = () => signOut(auth);
+
+        // --- FIRESTORE : ÉCOUTE TEMPS RÉEL ---
+        function startFirestoreListener() {
+            const q = collection(db, 'artifacts', appId, 'public', 'data', 'calls');
+            
+            onSnapshot(q, (snapshot) => {
+                calls = []; 
+                snapshot.forEach((doc) => {
+                    calls.push({ firestoreId: doc.id, ...doc.data() });
+                });
+                
+                const currentView = document.getElementById('btn-entry').classList.contains('bg-[#fef8f3]') ? 'entry' :
+                                    document.getElementById('btn-dashboard').classList.contains('bg-[#fef8f3]') ? 'dashboard' : 'history';
+                
+                if(currentView !== 'entry') navigate(currentView);
+                
+            }, (error) => {
+                console.error("Erreur Firestore:", error);
+            });
+        }
+
+        // 2. Fonction pour charger les infos dirigeant
+        async function loadDirigeantInfo(nomComplet) {
+            const box = document.getElementById('dirigeant-info-box');
+            if(!nomComplet) { box.classList.add('hidden'); return; }
+
+            const parts = nomComplet.toUpperCase().split(' ').filter(p => p.length > 0);
+            let searchKey = parts.join('_').replace(/[^A-Z0-9_]/g, '');
+            
+            console.log("Recherche dirigeant : " + searchKey);
+
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'dirigeants', searchKey);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    document.getElementById('dir_mobile').value = data.mobile || data.tel || '-';
+                    document.getElementById('dir_email').value = data.email || '-';
+                    document.getElementById('dir_adresse').value = (data.adresse || '') + ' ' + (data.cp || '') + ' ' + (data.ville || '');
+                    box.classList.remove('hidden');
+                } else {
+                    console.log("Dirigeant non trouvé dans la base détaillée.");
+                    box.classList.add('hidden');
+                }
+            } catch (e) {
+                console.error("Erreur lecture dirigeant", e);
+            }
+        }
+
+        // --- CORRECTIF AUTO : Rendre la fonction accessible au HTML ---
+        window.loadDirigeantInfo = loadDirigeantInfo;
+
+        // GESTION DU FORMULAIRE D'APPEL
+        document.addEventListener('submit', async (e) => {
+            // CORRECTION BUG ID : 'callForm' au lieu de 'entryForm'
+            if(e.target && e.target.id === 'callForm') {
+                e.preventDefault();
+                const btn = document.querySelector('#callForm button[type="submit"]');
+                
+                if(!currentUser) { alert("Vous devez être connecté."); return; }
+                
+                const fd = new FormData(e.target);
+                const clientVal = document.getElementById('field_client').value;
+                if(!clientVal) { alert("Code centre invalide ou non chargé."); return; }
+
+                const obj = Object.fromEntries(fd.entries());
+                
+                // Ajout des métadonnées
+                obj.code = document.getElementById('code-centre').value;
+                obj.client = clientVal;
+                obj.agentId = currentUser.uid;
+                obj.agentEmail = currentUser.email;
+                obj.timestamp = Date.now();
+                obj.dateCall = new Date().toLocaleString('fr-FR');
+
+                // UI Loading
+                const originalText = btn.innerText;
+                btn.innerText = "Sauvegarde en cours...";
+                btn.disabled = true;
+
+                try {
+                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'calls'), obj);
+                    alert("Appel enregistré et partagé !");
+                    navigate('history');
+                } catch (error) {
+                    console.error("Erreur ajout:", error);
+                    alert("Erreur lors de la sauvegarde: " + error.message);
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                }
+            }
+        });
+
+        // Lancer la vue par défaut
+        navigate('entry');
+
+    // --- LOGIQUE DE SECURITE UI ---
+    function initSecurityLogic() {
+        const overlay = document.getElementById('auth-overlay');
+        const form = document.getElementById('loginForm');
+        
+        onAuthStateChanged(auth, (user) => {
+            if (user) { 
+                if(window.preloadCentresData) window.preloadCentresData();
+                if(overlay) {
+                    overlay.classList.add('hidden');
+                    overlay.style.display = 'none'; 
+                }
+            } else {
+                if(overlay) {
+                    overlay.classList.remove('hidden');
+                    overlay.style.display = 'flex';
+                }
+            }
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initSecurityLogic);
+    } else {
+        initSecurityLogic();
+    }
+
+    // --- MOTEUR DE RECHERCHE INTELLIGENT (AJOUT AUTO) ---
+    
+    let cachedCentresList = []; 
+
+    // Préchargement des données pour une recherche rapide
+    window.preloadCentresData = async function() {
+        if (cachedCentresList.length > 0) return;
+        try {
+            console.log("Chargement du cache des centres...");
+            // Utilisation des variables globales db et appId définies plus haut
+            const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'centres');
+            const snapshot = await getDocs(colRef);
+            cachedCentresList = snapshot.docs.map(doc => ({ code: doc.id, ...doc.data() }));
+            console.log(`${cachedCentresList.length} centres en cache.`);
+        } catch (e) { console.error("Erreur cache:", e); }
+    };
+
+    // Fonction de filtrage (Code OU Nom)
+    window.filterCentres = function(text) {
+        const box = document.getElementById('suggestions-box');
+        const inputVal = text.trim().toUpperCase();
+        if (inputVal.length < 1) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+
+        const results = cachedCentresList.filter(c => {
+            const codeMatch = c.code.toUpperCase().includes(inputVal);
+            const nameMatch = (c.nom || "").toUpperCase().includes(inputVal);
+            return codeMatch || nameMatch;
+        });
+
+        if (results.length > 0) {
+            box.innerHTML = results.map(c => `
+                <div onclick="selectCentreFromList('${c.code}')" class="p-3 hover:bg-orange-50 cursor-pointer transition flex justify-between items-center group text-left">
+                    <div><span class="font-bold text-[#F58220]">${c.code}</span><span class="text-gray-700 ml-2 font-medium">${c.nom || 'Sans nom'}</span></div>
+                    <span class="text-xs text-gray-400 group-hover:text-orange-400">${c.ville || ''}</span>
+                </div>
+            `).join('');
+            box.classList.remove('hidden');
+        } else {
+            box.innerHTML = `<div class="p-3 text-gray-400 italic text-sm">Aucun centre trouvé.</div>`;
+            box.classList.remove('hidden');
+        }
+    };
+
+    // Sélection d'un centre depuis la liste
+    window.selectCentreFromList = function(code) {
+        document.getElementById('code-centre').value = code;
+        document.getElementById('suggestions-box').classList.add('hidden');
+        
+        // Remplissage du formulaire via le cache local (plus rapide)
+        const centre = cachedCentresList.find(c => c.code === code);
+        if (centre) {
+            const fields = ['reseau', 'client', 'adresse', 'cp', 'ville', 'telephone', 'email', 'dirigeant', 'exploitant', 'rr', 'auditeur'];
+            
+            // Mapping spécifique pour certains champs
+            if(document.getElementById('field_client')) document.getElementById('field_client').value = centre.nom || '';
+            
+            fields.forEach(f => {
+                // Gestion des différences de nommage (ex: telephone vs tel)
+                let key = f;
+                if(f === 'telephone') key = 'tel';
+                if(f === 'client') key = 'nom';
+                
+                const el = document.getElementById('field_' + f);
+                if(el) el.value = centre[key] || '';
+            });
+            
+            if(centre.dirigeant && window.loadDirigeantInfo) window.loadDirigeantInfo(centre.dirigeant);
+            else document.getElementById('dirigeant-info-box')?.classList.add('hidden');
+        }
+    };
+
+    // Fermeture de la liste au clic extérieur
+    document.addEventListener('click', function(e) {
+        const box = document.getElementById('suggestions-box');
+        const input = document.getElementById('code-centre');
+        if (box && !box.contains(e.target) && e.target !== input) { box.classList.add('hidden'); }
+    });
+
+
+    // --- GESTION DES MODES D'AFFICHAGE ---
+
+    window.resetForm = function() {
+        // Reset Inputs
+        document.getElementById('code-centre').value = "";
+        document.getElementById('contact-externe-select').value = "";
+        
+        // Hide All Sections
+        document.getElementById('section-centre-info').classList.add('hidden');
+        document.getElementById('section-dirigeants').classList.add('hidden');
+        document.getElementById('section-cr').classList.add('hidden');
+        document.getElementById('btn-submit').classList.add('hidden');
+
+        // Reset Fields visually
+        const inputs = document.querySelectorAll('input[readonly]');
+        inputs.forEach(i => i.value = "");
+    };
+
+    // SCÉNARIO B : CONTACT EXTERNE
+    window.handleExternalContact = function(val) {
+        if(!val) { resetForm(); return; }
+
+        // 1. Reset côté centre
+        document.getElementById('code-centre').value = "EXTERNE"; // Marqueur pour le code
+        document.getElementById('suggestions-box').classList.add('hidden');
+        
+        // 2. Hide Infos Centre & Dirigeants
+        document.getElementById('section-centre-info').classList.add('hidden');
+        document.getElementById('section-dirigeants').classList.add('hidden');
+
+        // 3. Show CR & Submit
+        document.getElementById('section-cr').classList.remove('hidden');
+        document.getElementById('btn-submit').classList.remove('hidden');
+
+        // 4. Injecter la valeur dans le champ Client (caché ou readonly) pour la sauvegarde
+        // On utilise le champ field_client existant pour stocker le type de contact
+        document.getElementById('field_client').value = val; 
+    };
+
+    // MODIFICATION DE LA SÉLECTION LISTE (SCÉNARIO A)
+    // On remplace l'ancienne fonction selectCentreFromList
+    window.selectCentreFromList = function(code) {
+        // Reset côté externe
+        document.getElementById('contact-externe-select').value = "";
+
+        // UI Updates
+        document.getElementById('code-centre').value = code;
+        document.getElementById('suggestions-box').classList.add('hidden');
+        
+        // SHOW ALL SECTIONS
+        document.getElementById('section-centre-info').classList.remove('hidden');
+        document.getElementById('section-dirigeants').classList.remove('hidden');
+        document.getElementById('section-cr').classList.remove('hidden');
+        document.getElementById('btn-submit').classList.remove('hidden');
+
+        // DATA FILLING
+        const centre = cachedCentresList.find(c => c.code === code);
+        if (centre) {
+            const fields = ['reseau', 'client', 'adresse', 'cp', 'ville', 'telephone', 'email', 'dirigeant', 'exploitant', 'rr', 'auditeur'];
+            
+            if(document.getElementById('field_client')) document.getElementById('field_client').value = centre.nom || '';
+            
+            fields.forEach(f => {
+                let key = f;
+                if(f === 'telephone') key = 'tel';
+                if(f === 'client') key = 'nom';
+                
+                const el = document.getElementById('field_' + f);
+                if(el) el.value = centre[key] || '';
+            });
+            
+            if(centre.dirigeant && window.loadDirigeantInfo) window.loadDirigeantInfo(centre.dirigeant);
+            else document.getElementById('dirigeant-info-box')?.classList.add('hidden');
+        }
+    };
+
+
+    // PATCH pour checkCentre pour qu'il affiche les sections
+    const originalCheckCentre = window.checkCentre;
+    window.checkCentre = async function(code) {
+        // Logique UI d'affichage
+        document.getElementById('section-centre-info').classList.remove('hidden');
+        document.getElementById('section-dirigeants').classList.remove('hidden');
+        document.getElementById('section-cr').classList.remove('hidden');
+        document.getElementById('btn-submit').classList.remove('hidden');
+        document.getElementById('contact-externe-select').value = "";
+        
+        // Appel logique existante
+        await originalCheckCentre(code);
+    };
+    
+</script>
+</body>
+</html>
