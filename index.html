@@ -5,173 +5,360 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Application de Suivi</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    <style>
-        .fade-in { animation: fadeIn 0.4s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        /* Style pour masquer proprement */
-        .hidden { display: none !important; }
-    </style>
-</head>
-<body class="bg-gray-100 text-gray-800 h-screen flex overflow-hidden font-sans">
-
-    <div id="auth-overlay" class="fixed inset-0 z-[100] bg-gray-800/90 backdrop-blur-sm flex items-center justify-center transition-opacity duration-500">
-        <div class="bg-white p-10 rounded-xl shadow-2xl w-full max-w-[400px] relative border border-gray-200">
-            
-            <div class="flex flex-col items-center mb-8">
-                <div class="w-40 h-auto mb-6 flex items-center justify-center">
-                    <img src="Logo.png" alt="Logo SGS" class="object-contain w-full">
-                </div>
-                <h2 class="text-xl font-bold text-gray-800 tracking-tight uppercase">Espace Sécurisé</h2>
-                <div class="h-1 w-12 bg-[#F58220] mt-4 rounded-full"></div>
-            </div>
-
-            <form id="loginForm" class="space-y-5">
-                <div class="space-y-1">
-                    <label class="text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">Identifiant</label>
-                    <div class="relative group">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <i class="ph ph-user text-gray-400 group-focus-within:text-[#F58220] transition-colors"></i>
-                        </div>
-                        <input type="email" id="auth-email" class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#F58220] focus:border-[#F58220] sm:text-sm transition-all bg-gray-50 focus:bg-white" placeholder="Email professionnel" required>
-                    </div>
-                </div>
-
-                <div class="space-y-1">
-                    <label class="text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">Mot de passe</label>
-                    <div class="relative group">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <i class="ph ph-lock text-gray-400 group-focus-within:text-[#F58220] transition-colors"></i>
-                        </div>
-                        <input type="password" id="auth-password" class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#F58220] focus:border-[#F58220] sm:text-sm transition-all bg-gray-50 focus:bg-white" placeholder="••••••••" required>
-                    </div>
-                </div>
-
-                <div id="auth-error" class="hidden animate-pulse">
-                    <div class="flex items-center gap-2 text-red-600 text-xs font-bold bg-red-50 p-3 rounded-lg border border-red-100">
-                        <i class="ph ph-warning-circle text-lg"></i>
-                        <span>Identifiants incorrects</span>
-                    </div>
-                </div>
-
-                <button type="submit" class="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-[#F58220] hover:bg-[#d1650b] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#F58220] transition-all active:scale-[0.98]">
-                    <span id="btn-text">SE CONNECTER</span>
-                    <i id="btn-spinner" class="ph ph-spinner animate-spin hidden ml-2"></i>
-                </button>
-            </form>
-
-            <div class="mt-8 text-center border-t border-gray-100 pt-4">
-                <p class="text-xs text-gray-400">Application interne &copy; 2025</p>
-            </div>
-        </div>
-    </div>
-    
-    <aside class="w-64 bg-white border-r border-gray-200 flex flex-col z-10 shadow-sm">
-        <div class="p-6 flex justify-center border-b border-gray-100">
-            <div class="w-40 h-40 rounded-xl overflow-hidden flex items-center justify-center bg-white p-2 transition-transform hover:scale-105">
-                <img src="Logo.png" alt="Logo" class="w-full h-full object-contain">
-            </div>
-        </div>
-        
-        <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
-
-            <button onclick="navigate('entry')" id="btn-entry" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl hover:bg-gray-50 text-[#9fa0a2] transition-colors">
-                <i class="ph ph-phone-plus text-lg"></i> Nouvel Appel
-            </button>
-            <button onclick="navigate('dashboard')" id="btn-dashboard" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl hover:bg-gray-50 text-[#9fa0a2] transition-colors">
-                <i class="ph ph-chart-pie-slice text-lg"></i> Tableau de Bord
-            </button>
-            <button onclick="navigate('history')" id="btn-history" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl hover:bg-gray-50 text-[#9fa0a2] transition-colors">
-                <i class="ph ph-clock-counter-clockwise text-lg"></i> Historique
-            </button>
-
-        </nav>
-        <div class="p-4 border-t border-gray-100">
-            <button id="logout-btn" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl hover:bg-red-50 text-red-500 transition-colors border border-transparent hover:border-red-100">
-                <i class="ph ph-sign-out text-lg"></i> Déconnexion
-            </button>
-        </div>
-    </aside>
-
-    <div class="hidden bg-white p-4 flex justify-between items-center border-b border-gray-200 sticky top-0 z-20 blur-sm pointer-events-none transition-all duration-300">
-        <img src="logo.png" alt="Logo" class="h-8 w-auto">
-        <button id="mobile-menu-trigger" class="p-2 text-gray-600 rounded-lg hover:bg-gray-100">
-            <i class="ph ph-list text-2xl"></i>
-        </button>
-    </div>
-
-    <div id="mobile-sidebar" class="fixed inset-0 z-30 hidden">
-        <div class="absolute inset-0 bg-black/50" onclick="toggleMobileMenu()"></div>
-        <aside class="absolute left-0 top-0 bottom-0 w-64 bg-white shadow-xl flex flex-col">
-            <div class="p-6 flex justify-between items-center border-b border-gray-100">
-                <span class="font-bold text-lg text-[#F58220]">Menu</span>
-                <button onclick="toggleMobileMenu()"><i class="ph ph-x text-xl"></i></button>
-            </div>
-            <nav class="flex-1 p-4 space-y-2">
-                <button onclick="navigate('entry');toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-gray-600 hover:bg-gray-50"><i class="ph ph-phone-plus text-lg"></i> Nouvel Appel</button>
-                <button onclick="navigate('dashboard');toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-gray-600 hover:bg-gray-50"><i class="ph ph-chart-pie-slice text-lg"></i> Tableau de Bord</button>
-                <button onclick="navigate('history');toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-gray-600 hover:bg-gray-50"><i class="ph ph-clock-counter-clockwise text-lg"></i> Historique</button>
-                <button id="mobile-logout-btn" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-red-500 hover:bg-red-50 mt-4"><i class="ph ph-sign-out text-lg"></i> Déconnexion</button>
-            </nav>
-        </aside>
-    </div>
-
-    <main class="flex-1 flex flex-col h-full relative bg-gray-50/50 blur-sm pointer-events-none transition-all duration-300">
-        <div id="app-content" class="flex-1 overflow-y-auto p-4 md:p-8"></div>
-    </main>
-
-    <div id="detailModal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center fade-in backdrop-blur-sm">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden border border-gray-200">
-            <div class="bg-[#F58220] p-4 flex justify-between items-center text-white">
-                <h3 class="font-bold text-lg flex items-center gap-2"><i class="ph ph-file-text"></i> Détail du Dossier</h3>
-                <button onclick="closeDetail()" class="hover:bg-white/20 rounded-full p-1 transition"><i class="ph ph-x text-xl"></i></button>
-            </div>
-            <div class="p-6 space-y-4">
-                <div class="flex justify-between items-start border-b border-gray-100 pb-4">
-                    <div>
-                        <p class="text-xs font-bold text-gray-400 uppercase">Client / Centre</p>
-                        <p class="font-bold text-xl text-[#76787B]" id="modal-client">-</p>
-                        <p class="text-sm font-mono text-[#F58220]" id="modal-code">-</p>
-                    </div>
-                    <div class="text-right">
-                        <p class="text-xs font-bold text-gray-400 uppercase">Date & Agent</p>
-                        <p class="font-bold text-gray-800" id="modal-date">-</p>
-                        <p class="text-xs text-gray-500 italic mt-1" id="modal-agent">-</p>
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div><p class="text-xs font-bold text-gray-400 uppercase">Catégorie</p><p class="font-medium text-gray-700" id="modal-cat">-</p></div>
-                    <div><p class="text-xs font-bold text-gray-400 uppercase">Sous-catégorie</p><p class="font-medium text-gray-700" id="modal-sub">-</p></div>
-                </div>
-                <div class="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                    <p class="text-xs font-bold text-[#F58220] uppercase mb-2 flex items-center gap-1"><i class="ph ph-note-pencil"></i> Compte Rendu</p>
-                    <p class="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap" id="modal-cr">Aucun contenu.</p>
-                </div>
-            </div>
-            <div class="p-4 bg-gray-50 border-t border-gray-100 text-right">
-                <button onclick="closeDetail()" class="px-6 py-2 bg-gray-200 text-gray-700 font-bold rounded-lg hover:bg-gray-300 transition">Fermer</button>
-            </div>
-        </div>
-    </div>
-
     <script>
         // Configuration Globale
-        const CATEGORIES = {"Adelsoft": ["-"], "Agenda": ["-"], "Pilote": ["-"], "Box Marketing": ["-"]};
+        // --- CORRIGÉ : Déclaration vide. Les paramètres sont chargés depuis Firestore via appSettings.
+        const CATEGORIES = {}; 
         const CENTRES_DB = {}; 
         
         let calls = [];
-        let currentUser = null;
+        window.window.currentUser = null;
+        window.appSettings = {"Agenda": ["paramétrage planning / tarif", "paramétrage L", "info RDV", "info paiement / remboursement", "paramétrage promo", "gestion multi", "bug", "autre", "paramétrage compte pro"], "Box marketing": [], "RCPC": [], "Lemonway": [], "Partenariats": [], "Pilote": [], "SIR": [], "Interne service": [], "Externe service": []}; // Applications statiques suite à la suppression du paramétrage
+        window.callDirection = null; // Direction de l\'appel (Entrant/Sortant)
 
+        // --- GESTION DES FILTRES DE DATE ---
+        window.dateFilter = { mode: 'month', start: null, end: null }; // Par défaut : Mois en cours
+
+        window.setDateFilter = function(mode) {
+            window.dateFilter.mode = mode;
+            const now = new Date();
+            
+            // Mise à jour visuelle des boutons (simple gestion de classe)
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                if(btn.dataset.mode === mode) {
+                    btn.classList.add('bg-orange-100', 'text-orange-600', 'border-orange-200');
+                    btn.classList.remove('bg-white', 'text-gray-600', 'border-gray-200');
+                } else {
+                    btn.classList.remove('bg-orange-100', 'text-orange-600', 'border-orange-200');
+                    btn.classList.add('bg-white', 'text-gray-600', 'border-gray-200');
+                }
+            });
+
+            // Si personnalisé, on lit les inputs
+            if (mode === 'custom') {
+                const startVal = document.getElementById('filter-start').value;
+                const endVal = document.getElementById('filter-end').value;
+                if(startVal) window.dateFilter.start = new Date(startVal);
+                if(endVal) window.dateFilter.end = new Date(endVal + 'T23:59:59');
+            }
+            
+            // Rafraichir la vue active
+            const currentView = document.getElementById('btn-dashboard').classList.contains('bg-[#fef8f3]') ? 'dashboard' : 
+                                document.getElementById('btn-history').classList.contains('bg-[#fef8f3]') ? 'history' : null;
+            
+            if(currentView === 'dashboard') {
+                document.getElementById('app-content').innerHTML = renderDashboard();
+                initDashboardCharts();
+            } else if (currentView === 'history') {
+                refreshHistoryTable();
+            }
+        };
+
+        // Fonction utilitaire pour parser la date format "JJ/MM/AAAA HH:mm:ss"
+        window.parseCallDate = function(dateStr) {
+            if(!dateStr) return new Date(0);
+            const [datePart, timePart] = dateStr.split(' ');
+            const [day, month, year] = datePart.split('/');
+            // Reformatage ISO pour JS : YYYY-MM-DDTHH:mm:ss
+            return new Date(`${year}-${month}-${day}T${timePart || '00:00:00'}`);
+        };
+
+        window.getFilteredCalls = function() {
+            const mode = window.dateFilter.mode;
+            const now = new Date();
+            let start = new Date(now);
+            let end = new Date(now);
+
+            // Définition des bornes
+            if (mode === 'day') {
+                start.setHours(0,0,0,0);
+                end.setHours(23,59,59,999);
+            } else if (mode === 'week') {
+                const day = now.getDay() || 7; // Dimanche = 7
+                if(day !== 1) start.setHours(-24 * (day - 1));
+                start.setHours(0,0,0,0);
+                end.setHours(23,59,59,999); // Fin de semaine (ou aujourd'hui)
+            } else if (mode === 'month') {
+                start.setDate(1);
+                start.setHours(0,0,0,0);
+                end.setMonth(end.getMonth() + 1);
+                end.setDate(0);
+                end.setHours(23,59,59,999);
+            } else if (mode === 'year') {
+                start.setMonth(0, 1);
+                start.setHours(0,0,0,0);
+                end.setMonth(11, 31);
+                end.setHours(23,59,59,999);
+            } else if (mode === 'custom') {
+                start = window.dateFilter.start || new Date(0);
+                end = window.dateFilter.end || new Date(8640000000000000);
+            } else {
+                // 'all' ou autre
+                return calls;
+            }
+
+            return calls.filter(c => {
+                const cDate = window.parseCallDate(c.dateCall);
+                return cDate >= start && cDate <= end;
+            });
+        };
+
+        // Générateur HTML de la barre de filtres
+        window.renderFilterBar = function() {
+            const m = window.dateFilter.mode;
+            const cls = (target) => m === target ? 'bg-orange-100 text-orange-600 border-orange-200' : 'bg-white text-gray-600 border-gray-200';
+            
+            return `
+            <div class="bg-white p-2 rounded-xl shadow-sm border border-gray-100 mb-6 flex flex-col md:flex-row gap-3 items-center justify-between animate-fade-in">
+                <div class="flex gap-2 overflow-x-auto w-full md:w-auto pb-1 md:pb-0">
+                    <button onclick="setDateFilter('day')" data-mode="day" class="filter-btn px-4 py-2 rounded-lg border text-sm font-bold transition-colors whitespace-nowrap ${cls('day')}">Aujourd'hui</button>
+                    <button onclick="setDateFilter('week')" data-mode="week" class="filter-btn px-4 py-2 rounded-lg border text-sm font-bold transition-colors whitespace-nowrap ${cls('week')}">Cette Semaine</button>
+                    <button onclick="setDateFilter('month')" data-mode="month" class="filter-btn px-4 py-2 rounded-lg border text-sm font-bold transition-colors whitespace-nowrap ${cls('month')}">Ce Mois</button>
+                    <button onclick="setDateFilter('year')" data-mode="year" class="filter-btn px-4 py-2 rounded-lg border text-sm font-bold transition-colors whitespace-nowrap ${cls('year')}">Cette Année</button>
+                </div>
+                <div class="flex gap-2 items-center bg-gray-50 p-1.5 rounded-lg border border-gray-100 w-full md:w-auto">
+                    <i class="ph ph-calendar text-gray-400"></i>
+                    <input type="date" id="filter-start" class="bg-transparent text-sm outline-none text-gray-600 w-32">
+                    <span class="text-gray-400">-</span>
+                    <input type="date" id="filter-end" class="bg-transparent text-sm outline-none text-gray-600 w-32">
+                    <button onclick="setDateFilter('custom')" class="p-1.5 bg-[#F58220] text-white rounded hover:bg-orange-600 transition"><i class="ph ph-magnifying-glass"></i></button>
+                </div>
+            </div>`;
+        };
+        
+        // --- STUBS POUR COMPATIBILITÉ (Ancienne logique Multi-Centre) ---
+        window.validateSelectionCore = function() {};
+        window.openCenterSelectionModal = function() {};
+        window.closeCenterSelectionModal = function() {};
+        window.applyModalSelection = function() {};
+        window.renderModalSearchUI = function() {};
+        window.filterCentresForModal = function() {};
+        window.toggleSingleSelectionModal = function() {};
+        window.renderModalResults = function() {};
+        window.renderChips = function() { 
+            const container = document.getElementById('chips-container');
+            if(container) container.innerHTML = '<span class="text-gray-500 italic">Code centre unique requis.</span>';
+        };
+
+        
+        // --- LOGIQUE DE GESTION DES SECTIONS (Affichage/Masquage des blocs d'information) ---
+        window.resetFormSections = function(isExternal = false) {
+            // Champs info du Centre et Dirigeants
+            const sectionCentreInfo = document.getElementById('section-centre-info');
+            const sectionDirigeants = document.getElementById('section-dirigeants');
+            
+            // Section Compte Rendu et Bouton Soumettre
+            const sectionCR = document.getElementById('section-cr');
+            const btnSubmit = document.getElementById('btn-submit');
+
+            // Section Historique (cachée si contact externe)
+            const historyPreviewBox = document.getElementById('history-preview-box');
+
+            if (isExternal) {
+                // Masquer les infos Centre et Dirigeant
+                sectionCentreInfo?.classList.add('hidden');
+                sectionDirigeants?.classList.add('hidden');
+                historyPreviewBox?.classList.add('hidden');
+                
+                // Afficher le CR et le bouton
+                sectionCR?.classList.remove('hidden');
+                btnSubmit?.classList.remove('hidden');
+            } else {
+                // État initial (tout masqué, en attente de la sélection d'un centre)
+                sectionCentreInfo?.classList.add('hidden');
+                sectionDirigeants?.classList.add('hidden');
+                sectionCR?.classList.add('hidden');
+                btnSubmit?.classList.add('hidden');
+                historyPreviewBox?.classList.add('hidden');
+            }
+        };
+        
+
+// --- GESTION DU CONTACT EXTERNE (LOGIQUE RÉINTÉGRÉE) ---
+
+        const REGIONAL_MANAGERS = ["AMIRA Illiesse", "AUFFRAY Alexandre", "BECCAVIN Arnaud", "BOULANGER Nicolas", "BUSSAT Virginie", "CARRET Simon", "CHARTON Eric", "DELON Frédéric", "ETHAHMA Youness", "FARJOT Olivier", "GILLE Nicolas", "GOURDEAU David", "GUILLAUD Norbert", "MATHIEU Guillaume", "MONOD Auriane", "MÉNARD Frédéric", "RÉCLA Johan", "TORRES Charlène", "TURGIS Thomas", "ZILA HICHAM"]; // Liste RR mise à jour (Nom Prénom, tri alphabétique)
+
+// --- GESTION DU CONTACT EXTERNE (LOGIQUE RÉINTÉGRÉE ET DYNAMIQUE) ---
+window.handleExternalContact = function(value) {
+    const isExternal = value !== ''; 
+    const codeCentreInput = document.getElementById('code-centre');
+    const clientInput = document.getElementById('field_client');
+    const contactExterneCode = 'CONTACT_EXTERNE'; 
+    const detailsContainer = document.getElementById('external-contact-details');
+    
+    // 1. Logique de base (Masquer/Afficher sections principales, réinitialiser recherche)
+    window.clearSearch(); 
+    window.resetFormSections(isExternal); 
+    
+    const select = document.getElementById('contact-externe-select');
+    if (!isExternal && select) select.value = ""; 
+
+    if (isExternal) {
+        codeCentreInput.value = contactExterneCode;
+        codeCentreInput.disabled = true; 
+        clientInput.value = value; // Client name = selected type (e.g., 'Particulier')
+        window.currentSelectedCode = null;
+    } else {
+        codeCentreInput.disabled = false;
+        clientInput.value = ""; 
+    }
+    
+    // 2. Logique Dynamique (Afficher les champs spécifiques)
+    if (!detailsContainer) return;
+    detailsContainer.innerHTML = ''; // Effacer le contenu précédent
+
+    let htmlContent = '';
+
+    switch(value) {
+        case 'Responsable Régional':
+            const rrOptions = REGIONAL_MANAGERS.sort((a, b) => a.localeCompare(b, 'fr')).map(name => 
+                `<option value="${name}">${name}</option>`
+            ).join('');
+            
+            htmlContent = `
+                <div class="mt-4">
+                    <label class="section-title">Sélectionner le Responsable Régional</label>
+                    <div class="relative">
+                        <select name="contact_rr_name" id="contact-rr-select" class="w-full p-3 bg-white border border-gray-200 rounded-lg appearance-none focus:border-orange-500 outline-none font-bold text-gray-700">
+                            <option value="">-- Sélectionner --</option>
+                            ${rrOptions}
+                        </select>
+                        <i class="ph ph-caret-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+                    </div>
+                </div>
+            `;
+            break;
+        case 'Particulier':
+            htmlContent = `
+                <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                        <label class="section-title">Nom du Particulier</label>
+                        <input type="text" name="contact_particulier_name" class="w-full p-3 rounded-lg border bg-white border-gray-200 focus:border-orange-500 outline-none" placeholder="Nom et Prénom">
+                    </div>
+                    <div>
+                        <label class="section-title">Téléphone (facultatif)</label>
+                        <input type="tel" name="contact_particulier_phone" class="w-full p-3 rounded-lg border bg-white border-gray-200 focus:border-orange-500 outline-none" placeholder="0x xx xx xx xx">
+                    </div>
+                </div>
+            `;
+            break;
+        case 'Prestataire':
+            htmlContent = `
+                <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                        <label class="section-title">Nom du Prestataire / Partenaire</label>
+                        <input type="text" name="contact_prestataire_name" class="w-full p-3 rounded-lg border bg-white border-gray-200 focus:border-orange-500 outline-none" placeholder="Nom de l'entreprise ou contact">
+                    </div>
+                    <div>
+                        <label class="section-title">Téléphone (facultatif)</label>
+                        <input type="tel" name="contact_prestataire_phone" class="w-full p-3 rounded-lg border bg-white border-gray-200 focus:border-orange-500 outline-none" placeholder="0x xx xx xx xx">
+                    </div>
+                </div>
+            `;
+            break;
+        case 'Démarchage':
+            htmlContent = `
+                <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                        <label class="section-title">Nom Société / Contact</label>
+                        <input type="text" name="contact_demarchage_name" class="w-full p-3 rounded-lg border bg-white border-gray-200 focus:border-orange-500 outline-none" placeholder="Nom de l'entreprise ou contact">
+                    </div>
+                    <div>
+                        <label class="section-title">Téléphone à Recontacter (facultatif)</label>
+                        <input type="tel" name="contact_demarchage_phone" class="w-full p-3 rounded-lg border bg-white border-gray-200 focus:border-orange-500 outline-none" placeholder="0x xx xx xx xx">
+                    </div>
+                </div>
+            `;
+            break;
+        case 'Autre':
+            htmlContent = `
+                <div class="mt-4">
+                    <label class="section-title">Information Complémentaire</label>
+                    <textarea name="contact_autre_info" rows="2" class="w-full p-3 rounded-xl border border-gray-200 focus:border-orange-500 outline-none transition-all resize-none" placeholder="Détaillez la nature de l'appel (nom, organisme, sujet...)"></textarea>
+                </div>
+            `;
+            break;
+    }
+
+    detailsContainer.innerHTML = htmlContent;
+};
+
+
+// --- GESTION DE LA DIRECTION D'APPEL ---
+window.setCallDirection = function(direction) {
+    window.callDirection = direction;
+    const btnEntrant = document.getElementById('btn-entrant');
+    const btnSortant = document.getElementById('btn-sortant');
+
+    if (btnEntrant && btnSortant) {
+        if (direction === 'Entrant') {
+            btnEntrant.classList.remove('border-gray-200', 'text-gray-500');
+            btnEntrant.classList.add('border-orange-500', 'text-orange-500');
+            btnSortant.classList.remove('border-orange-500', 'text-orange-500');
+            btnSortant.classList.add('border-gray-200', 'text-gray-500');
+        } else if (direction === 'Sortant') {
+            btnSortant.classList.remove('border-gray-200', 'text-gray-500');
+            btnSortant.classList.add('border-orange-500', 'text-orange-500');
+            btnEntrant.classList.remove('border-orange-500', 'text-orange-500');
+            btnEntrant.classList.add('border-gray-200', 'text-gray-500');
+        }
+    }
+};
+
+// Fonction de réinitialisation pour la navigation
+window.resetCallDirection = function() {
+    // Met par défaut sur 'Entrant' (pré-sélection)
+    window.callDirection = 'Entrant'; 
+    const btnEntrant = document.getElementById('btn-entrant');
+    const btnSortant = document.getElementById('btn-sortant');
+    
+    if (btnEntrant) {
+        btnEntrant.classList.remove('border-gray-200', 'text-gray-500');
+        btnEntrant.classList.add('border-orange-500', 'text-orange-500');
+    }
+    if (btnSortant) {
+        btnSortant.classList.remove('border-orange-500', 'text-orange-500');
+        btnSortant.classList.add('border-gray-200', 'text-gray-500');
+    }
+}
+        
+        // --- FIX: Fonction clearSearch ajoutée par script ---
+        window.clearSearch = function(event) {
+            if(event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            
+            // Vider le champ visuel
+            const input = document.getElementById('code-centre');
+            if(input) {
+                input.value = "";
+                input.focus(); // Remettre le focus pour retaper direct
+            }
+
+            // Masquer la boite de suggestions
+            const box = document.getElementById('suggestions-box');
+            if(box) box.classList.add('hidden');
+            
+            // Réinitialiser le code sélectionné (variable mono-centre)
+            window.currentSelectedCode = null;
+
+            // Appel de la fonction de nettoyage existante (si elle existe)
+            if(typeof window.resetForm === 'function') {
+                window.resetForm();
+            }
+        };
+        // ----------------------------------------------------
+    
         function toggleMobileMenu() {
             const menu = document.getElementById('mobile-sidebar');
             if(menu) menu.classList.toggle('hidden');
         }
-        document.getElementById('mobile-menu-trigger')?.addEventListener('click', toggleMobileMenu);
-
+        
         // --- NAVIGATION ---
         function navigate(view) {
             const container = document.getElementById('app-content');
-            ['entry', 'dashboard', 'history'].forEach(id => {
+            ['entry', 'dashboard', 'history', 'followup'].forEach(id => {
                 const btn = document.getElementById('btn-' + id);
                 if (btn) {
                      if (id === view) btn.className = "w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl bg-[#fef8f3] text-[#F58220] transition-colors";
@@ -179,13 +366,108 @@
                 }
             });
 
-            if(view === 'entry') { container.innerHTML = renderEntry(); if(window.preloadCentresData) window.preloadCentresData(); }
-            else if(view === 'dashboard') {
+            if(view === 'entry') { 
+                container.innerHTML = renderEntry(); 
+                // IMPORTANT : Vider les sections au passage à la vue Saisie
+                window.resetFormSections(false);
+                if(window.preloadCentresData) window.preloadCentresData();
+                 
+                // *** CORRECTION (Bug ListeVide) ***
+                if(window.populateAppSelect && typeof window.populateAppSelect === 'function') {
+                    window.populateAppSelect();
+                }
+                if(typeof window.resetCallDirection === 'function') { 
+                    window.resetCallDirection(); 
+                }
+            } else if(view === 'dashboard') {
                 container.innerHTML = renderDashboard();
                 initDashboardCharts();
-            } else if(view === 'history') container.innerHTML = renderHistory();
-
+            } else if(view === 'history') {
+                container.innerHTML = renderHistory();
+            } else if(view === 'followup') {
+                container.innerHTML = renderFollowUp();
+            }
         }
+    
+        // --- LOGIQUE MÉTIER ---
+        async function checkCentre(code) {
+            const cleanCode = (code || document.getElementById('code-centre').value).trim().toUpperCase().split('.')[0];
+            const fields = ['reseau', 'client', 'adresse', 'cp', 'ville', 'tel', 'email', 'dirigeant', 'exploitant', 'rr', 'auditeur'];
+            
+            // Reset des champs avant recherche
+            fields.forEach(f => {
+                const el = document.getElementById('field_' + f);
+                if(el) el.value = "";
+            });
+            
+            // Pas de recherche si moins de 3 caractères
+            if (cleanCode.length < 3) return;
+
+            let data = null;
+
+            // 1. Recherche Locale (Backup immédiat)
+            if(CENTRES_DB[cleanCode]) {
+                data = CENTRES_DB[cleanCode];
+            }
+            
+            // 2. Recherche Firestore (Prioritaire si connecté)
+            if(typeof doc === 'function' && typeof getDoc === 'function' && currentUser) {
+                try {
+                    const appIdRef = typeof appId !== 'undefined' ? appId : 'centre-appels';
+                    const docRef = doc(db, 'artifacts', appIdRef, 'public', 'data', 'centres', cleanCode);
+                    const docSnap = await getDoc(docRef);
+                    
+                    if (docSnap.exists()) {
+                        data = docSnap.data();
+                        console.log("Données trouvées dans Firestore pour", cleanCode);
+                    }
+                } catch (e) {
+                    console.log("Erreur/Offline Firestore search:", e);
+                }
+            }
+
+            // Remplissage du formulaire
+            if(data) {
+                fields.forEach(f => {
+                    const el = document.getElementById('field_' + f);
+                    if(el) {
+                        const key = f === 'client' ? 'nom' : f;
+                        if(data[key]) el.value = data[key];
+                    }
+                });
+                
+                // Appel auto des infos dirigeant
+                if(data.dirigeant) loadDirigeantInfo(data.dirigeant);
+                else document.getElementById('dirigeant-info-box')?.classList.add('hidden');
+            }
+        }
+        
+        function exportCSV() {
+            if (!calls || calls.length === 0) { alert("Aucune donnée à exporter."); return; }
+            const headers = ["Date", "Collaborateur SGS", "Code Centre", "Nom Client", "Catégorie", "Sous-catégorie", "Statut", "Compte Rendu"];
+            const csvRows = [headers.join(";")];
+            calls.forEach(c => {
+                const clean = (text) => (text || "").toString().replace(/;/g, ",").replace(/[\r\n]+/gm, " ");
+                const row = [c.dateCall, clean(c.agentEmail), c.code, clean(c.client), clean(c.cat), clean(c.sub), clean(c.status || c.statut), clean(c.cr)];
+                csvRows.push(row.join(";"));
+            });
+            const blob = new Blob(["\uFEFF" + csvRows.join("\\n")], { type: "text/csv;charset=utf-8;" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "export_calltrack_collab.csv";
+            link.click();
+        }
+
+        // --- VUES (Templates) ---
+    
+    function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-sidebar');
+            if(menu) menu.classList.toggle('hidden');
+        }
+        document.getElementById('mobile-menu-trigger')?.addEventListener('click', toggleMobileMenu);
+
+        // --- NAVIGATION ---
+        
 
         // --- LOGIQUE MÉTIER ---
         async function checkCentre(code) {
@@ -242,7 +524,7 @@
 
         function exportCSV() {
             if (!calls || calls.length === 0) { alert("Aucune donnée à exporter."); return; }
-            const headers = ["Date", "Agent", "Code Centre", "Nom Client", "Catégorie", "Sous-catégorie", "Statut", "Compte Rendu"];
+            const headers = ["Date", "Collaborateur SGS", "Code Centre", "Nom Client", "Catégorie", "Sous-catégorie", "Statut", "Compte Rendu"];
             const csvRows = [headers.join(";")];
             calls.forEach(c => {
                 const clean = (text) => (text || "").toString().replace(/;/g, ",").replace(/[\r\n]+/gm, " ");
@@ -258,8 +540,9 @@
 
         // --- VUES (Templates) ---
 
-        // --- VUE CENTRES ---
+        // --- VUE CENTRES (CORRIGÉE MONO-SITE) ---
 
+    
     function renderEntry() {
         return `
         <div id="view-entry" class="fade-in max-w-6xl mx-auto pb-20">
@@ -269,48 +552,100 @@
 
             <div class="grid grid-cols-1 md:grid-cols-12 gap-4 mb-6">
                 
-                <div class="md:col-span-7 bg-white p-6 rounded-2xl shadow-sm border border-orange-100 flex flex-col justify-between">
-                    <div>
-                        <label class="block text-xs font-bold text-orange-400 uppercase mb-2">1. RECHERCHE CODE CENTRE</label>
-                        <div class="relative w-full">
-                            <i class="ph ph-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xl"></i>
-                            <input type="text" id="code-centre" 
-                                class="w-full pl-12 pr-12 py-3 bg-orange-50/50 border-2 border-orange-100 rounded-xl focus:border-[#F58220] focus:bg-white outline-none font-bold text-lg text-gray-700 transition-all placeholder-orange-200 uppercase"
-                                placeholder="Code ou Nom..." 
-                                autocomplete="off"
-                                onkeyup="filterCentres(this.value)" 
-                                onfocus="filterCentres(this.value)">
-                            
-                            <button onclick="resetForm()" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-red-400 p-1"><i class="ph ph-x-circle text-xl"></i></button>
+                
 
-                            <div id="suggestions-box" class="hidden absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-100 max-h-60 overflow-y-auto z-50 divide-y divide-gray-50"></div>
-                        </div>
-                    </div>
-                    <p class="text-xs text-gray-400 mt-3"><i class="ph ph-info"></i> Affiche toutes les fiches (Centre, Dirigeant, CR).</p>
+<div class="md:col-span-6 bg-white p-6 rounded-2xl shadow-sm border border-orange-100 flex flex-col justify-between">
+    <div>
+        <label class="block text-xs font-bold text-orange-400 uppercase mb-2">1. RECHERCHE CODE/NOM/DIRIGEANT</label>
+        <div class="relative w-full">
+            
+            <div class="w-full flex items-center py-2 px-3 bg-orange-50/50 border-2 border-orange-100 rounded-xl focus-within:border-[#F58220] focus-within:bg-white transition-all cursor-text min-h-[50px] space-x-2">
+                
+                <input type="text" id="code-centre" 
+                    class="flex-1 bg-transparent outline-none font-bold text-lg text-gray-700 placeholder-orange-300 min-w-[50%]"
+                    placeholder="Code, Nom, Ville ou Dirigeant..." 
+                    autocomplete="off"
+                    oninput="filterCentres(this.value)"
+                    onfocus="onSearchFocus(this)">
                 </div>
+            
+            <div id="suggestions-box" class="hidden absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-100 max-h-60 overflow-y-auto z-50 divide-y divide-gray-50" style="z-index: 100;"></div>
 
-                <div class="md:col-span-5 bg-white p-6 rounded-2xl shadow-sm border border-gray-200 flex flex-col justify-between relative overflow-hidden">
-                    <div class="absolute top-0 right-0 w-16 h-16 bg-gray-50 rounded-bl-full -mr-8 -mt-8 z-0"></div>
-                    <div class="relative z-10">
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">OU 2. CONTACT EXTERNE</label>
-                        <div class="relative">
-                            <i class="ph ph-address-book absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xl"></i>
-                            <select id="contact-externe-select" onchange="handleExternalContact(this.value)" class="w-full pl-12 pr-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl focus:border-gray-400 outline-none font-bold text-gray-700 appearance-none cursor-pointer hover:bg-white transition-colors">
-                                <option value="">-- Sélectionner --</option>
-                                <option value="RR">Responsable Régional (RR)</option>
-                                <option value="Particulier">Particulier</option>
-                                <option value="Prestataire">Prestataire</option>
-                                <option value="Démarchage">Démarchage</option>
-                                <option value="Autre">Autre</option>
-                            </select>
-                            <i class="ph ph-caret-down absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+            <div id="suggestions-box-ac" class="hidden"></div>
+        </div>
+    </div>
+    <p class="text-xs text-gray-400 mt-3"><i class="ph ph-info"></i> Sélectionnez un centre pour charger automatiquement la fiche.</p>
+</div>
+
+
+                
+<div class="md:col-span-6 bg-white p-6 rounded-2xl shadow-sm border border-gray-200 flex flex-col justify-between relative overflow-hidden">
+    <div class="absolute top-0 right-0 w-16 h-16 bg-gray-50 rounded-bl-full -mr-8 -mt-8 z-0"></div>
+    <div class="relative z-10">
+        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">2. CONTACT EXTERNE</label>
+        <div class="relative">
+            
+            <select id="contact-externe-select" onchange="handleExternalContact(this.value)" class="w-full pl-4 pr-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl focus:border-gray-400 outline-none font-bold text-gray-700 appearance-none cursor-pointer hover:bg-white transition-colors">
+                <option value="">-- Sélectionner --</option>
+                <option value="Responsable Régional">Responsable Régional (RR)</option>
+                <option value="Particulier">Particulier</option>
+                <option value="Prestataire">Prestataire</option>
+                <option value="Démarchage">Démarchage</option>
+                <option value="Autre">Autre</option>
+            </select>
+            <i class="ph ph-caret-down absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+        </div>
+        <div id="external-contact-details">
+            </div>
+    </div>
+    <p class="text-xs text-gray-400 mt-3"><i class="ph ph-eye-slash"></i> Masque les infos centre, affiche uniquement le CR.</p>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-12 gap-4 mb-6">
+                <div class="md:col-span-12">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-3">3. DIRECTION DE L'APPEL</label>
+                        <div class="grid grid-cols-2 gap-4">
+                            <button type="button" id="btn-entrant" onclick="setCallDirection('Entrant')" class="p-4 rounded-xl border-2 border-orange-500 text-orange-500 font-bold flex flex-col items-center justify-center gap-1 transition-colors hover:border-orange-300 hover:text-orange-500 h-24">
+                                <i class="ph ph-phone-incoming text-3xl"></i>
+                                <span class="text-sm">Appel Entrant</span>
+                            </button>
+                            <button type="button" id="btn-sortant" onclick="setCallDirection('Sortant')" class="p-4 rounded-xl border-2 border-gray-200 text-gray-500 font-bold flex flex-col items-center justify-center gap-1 transition-colors hover:border-orange-300 hover:text-orange-500 h-24">
+                                <i class="ph ph-phone-outgoing text-3xl"></i>
+                                <span class="text-sm">Appel Sortant</span>
+                            </button>
                         </div>
+                        <p class="text-xs text-gray-400 mt-3"><i class="ph ph-warning-circle"></i> Cette sélection est obligatoire pour l'enregistrement.</p>
                     </div>
-                    <p class="text-xs text-gray-400 mt-3"><i class="ph ph-eye-slash"></i> Masque les infos centre, affiche uniquement le CR.</p>
+                </div>
+            </div>
+            
+            <div id="history-preview-box" class="hidden mb-6 bg-white rounded-2xl shadow-sm border border-purple-100 relative overflow-hidden fade-in">
+                <div class="absolute top-0 left-0 w-1 h-full bg-purple-500"></div>
+                <div class="p-4 border-b border-purple-50 bg-purple-50/30 flex justify-between items-center">
+                    <h3 class="text-purple-700 font-bold text-sm uppercase flex items-center gap-2">
+                        <i class="ph ph-clock-counter-clockwise text-xl"></i> Derniers Échanges (5 max)
+                    </h3>
+                    <span class="text-xs text-purple-400 font-mono" id="hist-count-badge">0 trouvés</span>
+                </div>
+                <div class="p-0 overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="text-xs text-gray-400 uppercase bg-gray-50/50">
+                            <tr>
+                                <th class="p-3 font-medium">Date</th>
+                                <th class="p-3 font-medium">Collaborateur SGS</th>
+                                <th class="p-3 font-medium">Statut</th>
+                                <th class="p-3 font-medium w-1/2">Note Rapide</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-preview-rows" class="divide-y divide-gray-50">
+                            </tbody>
+                    </table>
                 </div>
             </div>
 
             <form id="callForm" class="space-y-6">
+    
                 
                 <div id="section-centre-info" class="hidden bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden group hover:shadow-md transition-shadow">
                     <div class="absolute top-0 left-0 w-1 h-full bg-[#F58220]"></div>
@@ -327,7 +662,14 @@
                             <div class="flex-1"><label class="section-title">Ville</label><input id="field_ville" readonly class="w-full p-3 rounded-lg border bg-gray-50 font-bold text-gray-700"></div>
                         </div>
                         <div><label class="section-title">Téléphone</label><input id="field_telephone" readonly class="w-full p-3 rounded-lg border bg-gray-50 text-gray-800 font-mono"></div>
-                        <div><label class="section-title">Email</label><input id="field_email" readonly class="w-full p-3 rounded-lg border bg-gray-50 text-blue-600 truncate"></div>
+                        
+                        <div class="relative">
+                            <label class="section-title">Email</label>
+                            <input id="field_email" readonly class="w-full p-3 rounded-lg border bg-gray-50 text-blue-600 pr-10" placeholder="Email">
+                            <a href="#" onclick="window.open('mailto:' + document.getElementById('field_email').value, '_blank')" class="absolute right-0 bottom-0 top-[2.5rem] -translate-y-1/2 mr-1 p-1 text-blue-500 hover:text-blue-700 disabled:opacity-50 disabled:pointer-events-none transition-colors" title="Envoyer un email au centre">
+                                <i class="ph ph-envelope-simple text-lg"></i>
+                            </a>
+                        </div>
                     </div>
                 </div>
 
@@ -345,9 +687,14 @@
                                 <input id="field_dirigeant" readonly class="flex-1 p-3 bg-white border-0 rounded-xl shadow-sm font-bold text-blue-900 placeholder-blue-200" placeholder="Nom du dirigeant">
                             </div>
                             <div id="dirigeant-info-box" class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2 hidden border-t border-blue-100 pt-3">
-                                <input id="dir_mobile" readonly class="w-full p-2 text-sm bg-white rounded-lg border border-blue-100 text-blue-800 font-mono" placeholder="Mobile">
-                                <input id="dir_email" readonly class="w-full p-2 text-sm bg-white rounded-lg border border-blue-100 text-blue-800" placeholder="Email">
-                                <input id="dir_adresse" readonly class="md:col-span-2 w-full p-2 text-sm bg-white rounded-lg border border-blue-100 text-blue-800" placeholder="Adresse">
+                                <input id="dir_mobile" readonly class="w-full p-3 text-sm bg-white rounded-lg border border-blue-100 text-blue-800 font-mono" placeholder="Mobile">
+                                <div class="relative flex items-center">
+                                    <input id="dir_email" readonly class="flex-1 p-3 text-sm bg-white rounded-lg border border-blue-100 text-blue-800 pr-10" placeholder="Email">
+                                    <a href="#" onclick="window.open('mailto:' + document.getElementById('dir_email').value, '_blank')" class="absolute right-0 top-1/2 -translate-y-1/2 mr-1 p-1 text-blue-500 hover:text-blue-700 disabled:opacity-50 disabled:pointer-events-none transition-colors" title="Envoyer un email au dirigeant">
+                                        <i class="ph ph-envelope-simple text-lg"></i>
+                                    </a>
+                                </div>
+                                <input id="dir_adresse" readonly class="md:col-span-2 w-full p-3 text-sm bg-white rounded-lg border border-blue-100 text-blue-800" placeholder="Adresse">
                             </div>
                         </div>
                         <div><label class="section-title">Exploitant</label><input id="field_exploitant" readonly class="w-full p-3 rounded-lg border bg-gray-50 text-gray-700"></div>
@@ -357,9 +704,32 @@
                 </div>
 
                 <div id="section-cr" class="hidden bg-gray-50 p-6 rounded-2xl border border-gray-200">
+                    
                     <h3 class="text-gray-500 font-bold text-sm uppercase mb-4 flex items-center gap-2">
-                        <i class="ph ph-notepad"></i> Compte-Rendu
+                        <i class="ph ph-notepad"></i> Qualification & Compte-Rendu
                     </h3>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Application Concernée</label>
+                            <div class="relative">
+                                <select name="app_concern" id="select-app" onchange="updateCategoryOptions()" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg appearance-none focus:border-orange-500 outline-none text-sm font-bold text-gray-700">
+                                    <option value="">-- Sélectionner --</option>
+                                </select>
+                                <i class="ph ph-caret-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Catégorie</label>
+                            <div class="relative">
+                                <select name="category" id="select-cat" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg appearance-none focus:border-orange-500 outline-none text-sm font-bold text-gray-700">
+                                    <option value="">-- D'abord choisir l'app --</option>
+                                </select>
+                                <i class="ph ph-caret-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+                            </div>
+                        </div>
+                    </div>
+    
                     
                     <div class="mb-4">
                         <label class="section-title">Statut de l'appel</label>
@@ -386,7 +756,7 @@
 
                     <div>
                         <label class="section-title">Commentaire</label>
-                        <textarea id="commentaire" rows="3" class="w-full p-4 rounded-xl border-gray-200 border focus:border-[#F58220] focus:ring-1 focus:ring-orange-200 outline-none transition-all resize-none" placeholder="Détails de l'échange..."></textarea>
+                        <textarea name="cr" id="commentaire" rows="3" class="w-full p-4 rounded-xl border-gray-200 border focus:border-[#F58220] focus:ring-1 focus:ring-orange-200 outline-none transition-all resize-none" placeholder="Détails de l'échange..."></textarea>
                     </div>
                 </div>
 
@@ -399,13 +769,23 @@
     }
 
         function renderDashboard() {
-            const totalCalls = calls.length;
+            // Récupération des données filtrées
+            const filteredCalls = window.getFilteredCalls();
+            
+            // Calcul des stats sur les données filtrées
+            const totalCalls = filteredCalls.length;
             const statusStats = { "Clôturé": 0, "En cours": 0, "À traiter": 0, "À rappeler": 0 };
-            calls.forEach(c => { const s = c.status || c.statut; if(statusStats[s] !== undefined) statusStats[s]++; });
+            filteredCalls.forEach(c => { const s = c.status || c.statut; if(statusStats[s] !== undefined) statusStats[s]++; });
             
             return `
                 <div class="fade-in space-y-6">
-                    <h2 class="text-2xl font-bold text-[#76787B]">Tableau de Bord Global</h2>
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-2xl font-bold text-[#76787B]">Tableau de Bord</h2>
+                        <span class="text-sm font-bold text-orange-500 bg-orange-50 px-3 py-1 rounded-full">${totalCalls} Appels sur la période</span>
+                    </div>
+                    
+                    ${window.renderFilterBar()}
+
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-green-500">
                             <p class="text-xs text-gray-400 uppercase font-bold">Clôturés</p><p class="text-3xl font-bold text-gray-800">${statusStats['Clôturé']}</p>
@@ -421,18 +801,19 @@
                         </div>
                     </div>
                     <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                        <h3 class="font-bold text-gray-700 mb-4">Répartition des Statuts</h3>
+                        <h3 class="font-bold text-gray-700 mb-4">Répartition des Statuts (Période sélectionnée)</h3>
                         <div class="h-64"><canvas id="chartStatus"></canvas></div>
                     </div>
                 </div>`;
         }
 
         function initDashboardCharts() {
+            const filteredCalls = window.getFilteredCalls();
             const statusData = [
-                calls.filter(c => (c.status || c.statut) === 'Clôturé').length,
-                calls.filter(c => (c.status || c.statut) === 'En cours').length,
-                calls.filter(c => (c.status || c.statut) === 'À traiter').length,
-                calls.filter(c => (c.status || c.statut) === 'À rappeler').length
+                filteredCalls.filter(c => (c.status || c.statut) === 'Clôturé').length,
+                filteredCalls.filter(c => (c.status || c.statut) === 'En cours').length,
+                filteredCalls.filter(c => (c.status || c.statut) === 'À traiter').length,
+                filteredCalls.filter(c => (c.status || c.statut) === 'À rappeler').length
             ];
             new Chart(document.getElementById('chartStatus'), {
                 type: 'doughnut',
@@ -446,45 +827,287 @@
                 },
                 options: { responsive: true, maintainAspectRatio: false, cutout: '70%' }
             });
-        }
+        };function renderFollowUp() {
+            // Filtrage des appels à traiter
+            const todoCalls = calls.filter(c => {
+                const s = c.status || c.statut;
+                return ['En cours', 'À traiter', 'À rappeler'].includes(s);
+            });
 
-        function renderHistory() {
-            // Tri par date décroissante
-            const rows = calls.sort((a,b) => (a.dateCall < b.dateCall ? 1 : -1)).map(c => `
-                <tr class="border-b last:border-0 hover:bg-gray-50 transition group">
+            // Tri : Les plus anciens d'abord ? Ou les plus récents ?
+            const rows = todoCalls.sort((a,b) => (a.dateCall < b.dateCall ? 1 : -1)).map(c => `
+                <tr class="border-b last:border-0 hover:bg-orange-50/40 transition group">
                     <td class="p-3 font-mono text-xs text-gray-500">${c.dateCall}</td>
                     <td class="p-3 font-bold text-gray-700 text-sm">${c.code}</td>
                     <td class="p-3"><div class="font-bold text-[#76787B] text-sm truncate w-32 md:w-auto">${c.client}</div></td>
                     <td class="p-3 text-xs hidden md:table-cell text-gray-500">${c.agentEmail || 'Inconnu'}</td>
-                    <td class="p-3 text-sm hidden md:table-cell"><span class="px-2 py-1 rounded bg-orange-50 text-orange-700 text-xs">${c.cat}</span></td>
-                    <td class="p-3"><span class="px-2 py-1 rounded-full text-xs font-bold ${(c.status || c.statut) === 'Clôturé' ? 'bg-green-100 text-green-700' : (c.status || c.statut) === 'À rappeler' ? 'bg-red-100 text-red-700' : (c.status || c.statut) === 'À traiter' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}">${c.status || c.statut}</span></td>
-                    <td class="p-3 text-right"><button onclick="openDetail('${c.firestoreId}')" class="p-2 bg-gray-100 hover:bg-[#F58220] hover:text-white rounded-lg transition"><i class="ph ph-eye text-lg"></i></button></td>
+                    <td class="p-3 text-sm hidden md:table-cell"><span class="px-2 py-1 rounded bg-gray-100 text-gray-600 text-xs">${c.cat}</span></td>
+                    <td class="p-3">
+                        <span class="px-2 py-1 rounded-full text-xs font-bold ${(c.status || c.statut) === 'À rappeler' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}">${c.status || c.statut}</span>
+                    </td>
+                    <td class="p-3 w-1/3">
+                        <p class="text-xs text-gray-600 line-clamp-2 leading-relaxed max-w-md" title="${c.cr || ''}">${c.cr || '<span class="italic text-gray-300">Aucun commentaire</span>'}</p>
+                    </td>
+                    <td class="p-3 text-right"><button onclick="openDetail('${c.firestoreId}')" class="p-2 bg-white border border-orange-200 text-orange-500 hover:bg-orange-500 hover:text-white rounded-lg transition"><i class="ph ph-pencil-simple text-lg"></i></button></td>
                 </tr>
             `).join('');
 
             return `
                 <div class="fade-in">
                     <div class="flex justify-between items-end mb-6">
-                        <div><h2 class="text-2xl font-bold text-[#76787B]">Historique Global</h2><p class="text-sm text-gray-400">Tous les appels de l'équipe</p></div>
-                        <button onclick="exportCSV()" class="px-4 py-2 bg-white border rounded-lg text-sm hover:bg-gray-50"><i class="ph ph-download-simple"></i> Export</button>
+                        <div>
+                            <h2 class="text-2xl font-bold text-orange-600 flex items-center gap-2"><i class="ph ph-list-checks"></i> Suivi des Actions</h2>
+                            <p class="text-sm text-gray-400">Tickets nécessitant une intervention (En cours, À traiter, À rappeler)</p>
+                        </div>
+                        <div class="bg-orange-100 text-orange-700 px-4 py-2 rounded-lg font-bold text-sm border border-orange-200">
+                            ${todoCalls.length} dossiers en attente
+                        </div>
                     </div>
-                    <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+                    <div class="bg-white rounded-xl shadow-sm border border-orange-100 overflow-hidden">
                         <div class="overflow-x-auto">
                             <table class="w-full text-left whitespace-nowrap">
-                                <thead class="bg-gray-50 text-xs font-bold text-gray-400 uppercase border-b">
-                                    <tr><th class="p-3">Date</th><th class="p-3">Code</th><th class="p-3">Client</th><th class="p-3 hidden md:table-cell">Agent</th><th class="p-3 hidden md:table-cell">Catégorie</th><th class="p-3">Statut</th><th class="p-3 text-right">Action</th></tr>
+                                <thead class="bg-orange-50 text-xs font-bold text-orange-400 uppercase border-b border-orange-100">
+                                    <tr>
+                                        <th class="p-3">Date</th>
+                                        <th class="p-3">Code</th>
+                                        <th class="p-3">Client</th>
+                                        <th class="p-3 hidden md:table-cell">Collaborateur SGS</th>
+                                        <th class="p-3 hidden md:table-cell">Catégorie</th>
+                                        <th class="p-3">Statut</th>
+                                        <th class="p-3 w-1/3">Note</th>
+                                        <th class="p-3 text-right">Action</th>
+                                    </tr>
                                 </thead>
-                                <tbody>${rows || '<tr><td colspan="7" class="p-6 text-center italic">Aucun appel enregistré.</td></tr>'}</tbody>
+                                <tbody>${rows || '<tr><td colspan="8" class="p-8 text-center italic text-gray-400">Aucune action en attente. Bon travail ! <i class="ph ph-smiley"></i></td></tr>'}</tbody>
                             </table>
                         </div>
                     </div>
                 </div>`;
         }
+    
+
+        
+    // --- GESTION AVANCÉE HISTORIQUE (TRIS & FILTRES) ---
+    let histState = {
+        sortCol: 'timestamp', // Par défaut : date/heure
+        sortAsc: false,       // Par défaut : le plus récent en premier
+        filterText: '',
+        filterStatus: ''
+    };
+
+    // Fonction principale qui calcule et affiche les lignes
+    window.refreshHistoryTable = function() {
+        const tbody = document.getElementById('history-table-body');
+        const countSpan = document.getElementById('history-count');
+        if(!tbody) return;
+
+        // 1. FILTRAGE PAR DATE (D'abord)
+        const dateFiltered = window.getFilteredCalls();
+
+        // 2. FILTRAGE PAR TEXTE/STATUT
+        let filtered = dateFiltered.filter(c => {
+            const searchStr = (histState.filterText || '').toLowerCase();
+            const statusFilter = histState.filterStatus;
+            
+            // Données normalisées
+            const code = (c.code || '').toLowerCase();
+            const client = (c.client || '').toLowerCase();
+            const agent = (c.agentEmail || '').toLowerCase();
+            const statut = (c.status || c.statut || '').toString();
+
+            // Match Texte (Code, Client ou Agent)
+            const textMatch = !searchStr || code.includes(searchStr) || client.includes(searchStr) || agent.includes(searchStr);
+            
+            // Match Statut
+            const statusMatch = !statusFilter || statut === statusFilter;
+
+            return textMatch && statusMatch;
+        });
+
+        // 2. TRI
+        filtered.sort((a, b) => {
+            let valA, valB;
+
+            // Sélection de la valeur selon la colonne
+            if (histState.sortCol === 'timestamp') {
+                valA = a.timestamp || 0; 
+                valB = b.timestamp || 0;
+            } else if (histState.sortCol === 'dateCall') {
+                // Tri par date string (moins précis but fallback)
+                valA = a.dateCall || ''; 
+                valB = b.dateCall || '';
+            } else if (histState.sortCol === 'statut') {
+                valA = (a.status || a.statut || '').toLowerCase();
+                valB = (b.status || b.statut || '').toLowerCase();
+            } else if (histState.sortCol === 'agent') {
+                valA = (a.agentEmail || '').toLowerCase();
+                valB = (b.agentEmail || '').toLowerCase();
+            } else {
+                // Cas génériques (code, client, cat...)
+                valA = (a[histState.sortCol] || '').toLowerCase();
+                valB = (b[histState.sortCol] || '').toLowerCase();
+            }
+
+            if (valA < valB) return histState.sortAsc ? -1 : 1;
+            if (valA > valB) return histState.sortAsc ? 1 : -1;
+            return 0;
+        });
+
+        // 3. GENERATION HTML
+        const html = filtered.map(c => `
+            <tr class="border-b last:border-0 hover:bg-gray-50 transition group">
+                <td class="p-3 font-mono text-xs text-gray-500">${c.dateCall}</td>
+                <td class="p-3 font-bold text-gray-700 text-sm">${c.code}</td>
+                <td class="p-3"><div class="font-bold text-[#76787B] text-sm truncate w-32 md:w-auto">${c.client}</div></td>
+                <td class="p-3 text-xs hidden md:table-cell text-gray-500">${c.agentEmail || 'Inconnu'}</td>
+                <td class="p-3 text-sm hidden md:table-cell"><span class="px-2 py-1 rounded bg-orange-50 text-orange-700 text-xs">${c.cat}</span></td>
+                <td class="p-3">
+                    <span class="px-2 py-1 rounded-full text-xs font-bold ${(c.status || c.statut) === 'Clôturé' ? 'bg-green-100 text-green-700' : (c.status || c.statut) === 'À rappeler' ? 'bg-red-100 text-red-700' : (c.status || c.statut) === 'À traiter' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}">${c.status || c.statut}</span>
+                </td>
+                <td class="p-3 w-1/3">
+                    <p class="text-xs text-gray-600 line-clamp-2 leading-relaxed max-w-md" title="${c.cr || ''}">${c.cr || '<span class="italic text-gray-300">Aucun commentaire</span>'}</p>
+                </td>
+                <td class="p-3 text-right"><button onclick="openDetail('${c.firestoreId}')" class="p-2 bg-gray-100 hover:bg-[#F58220] hover:text-white rounded-lg transition"><i class="ph ph-eye text-lg"></i></button></td>
+            </tr>
+        `).join('');
+
+        tbody.innerHTML = html || '<tr><td colspan="8" class="p-8 text-center italic text-gray-400">Aucun résultat ne correspond à votre recherche.</td></tr>';
+        
+        // Mise à jour compteur
+        if(countSpan) countSpan.innerText = `${filtered.length} / ${window.getFilteredCalls().length}`;
+        
+        // Mise à jour visuelle des flèches de tri
+        updateSortIcons();
+    };
+
+    // Actions UI
+    window.setHistorySort = function(col) {
+        if (histState.sortCol === col) {
+            histState.sortAsc = !histState.sortAsc; // Inverse
+        } else {
+            histState.sortCol = col;
+            histState.sortAsc = true; // Reset
+        }
+        refreshHistoryTable();
+    };
+
+    window.setHistoryFilter = function(val) {
+        histState.filterText = val;
+        refreshHistoryTable();
+    };
+
+    window.setHistoryStatusFilter = function(val) {
+        histState.filterStatus = val;
+        refreshHistoryTable();
+    };
+
+    function updateSortIcons() {
+        // Reset toutes les icônes
+        document.querySelectorAll('.sort-icon').forEach(i => i.className = 'ph ph-arrows-down-up sort-icon text-gray-300 ml-1');
+        
+        // Active la bonne
+        const activeIcon = document.getElementById('sort-' + histState.sortCol);
+        if(activeIcon) {
+            activeIcon.className = histState.sortAsc ? 'ph ph-arrow-up sort-icon text-[#F58220] ml-1' : 'ph ph-arrow-down sort-icon text-[#F58220] ml-1';
+        }
+    }
+    
+
+        
+        function renderHistory() {
+            // Le rendu initial lance la structure, puis appelle refreshHistoryTable() pour les données
+            setTimeout(() => refreshHistoryTable(), 50);
+
+            return `
+                <div class="fade-in">
+                    ${window.renderFilterBar()}
+                    <div class="flex justify-between items-end mb-6">
+                        <div>
+                            <h2 class="text-2xl font-bold text-[#76787B]">Historique Global</h2>
+                            <p class="text-sm text-gray-400">Tous les appels de l'équipe</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <span class="px-3 py-2 bg-white border rounded-lg text-xs font-bold text-gray-500 flex items-center gap-2">
+                                <i class="ph ph-database"></i> <span id="history-count">...</span>
+                            </span>
+                            <button onclick="exportCSV()" class="px-4 py-2 bg-white border rounded-lg text-sm hover:bg-gray-50 text-gray-600 font-medium">
+                                <i class="ph ph-download-simple"></i> Export
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-t-xl border-b border-gray-100 flex flex-col md:flex-row gap-4 items-center shadow-sm">
+                        
+                        <div class="relative flex-1 w-full">
+                            
+                            <input type="text" 
+                                oninput="setHistoryFilter(this.value)" 
+                                class="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:border-[#F58220] outline-none text-sm transition-colors"
+                                placeholder="Rechercher par Code, Client ou Collaborateur...">
+                        </div>
+
+                        <div class="w-full md:w-48 relative">
+                            <i class="ph ph-funnel absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                            <select onchange="setHistoryStatusFilter(this.value)" class="w-full pl-10 pr-8 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:border-[#F58220] outline-none text-sm appearance-none cursor-pointer">
+                                <option value="">Tous les statuts</option>
+                                <option value="Clôturé">Clôturé</option>
+                                <option value="En cours">En cours</option>
+                                <option value="À traiter">À traiter</option>
+                                <option value="À rappeler">À rappeler</option>
+                                <option value="NRP">NRP</option>
+                                <option value="Refus">Refus</option>
+                                <option value="Validé">Validé</option>
+                            </select>
+                            <i class="ph ph-caret-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-b-xl shadow-sm border border-t-0 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left whitespace-nowrap">
+                                <thead class="bg-gray-50 text-xs font-bold text-gray-500 uppercase border-b">
+                                    <tr>
+                                        <th onclick="setHistorySort('timestamp')" class="p-3 cursor-pointer hover:bg-gray-100 transition select-none">
+                                            Date <i id="sort-timestamp" class="ph ph-arrows-down-up sort-icon text-gray-300 ml-1"></i>
+                                        </th>
+                                        <th onclick="setHistorySort('code')" class="p-3 cursor-pointer hover:bg-gray-100 transition select-none">
+                                            Code <i id="sort-code" class="ph ph-arrows-down-up sort-icon text-gray-300 ml-1"></i>
+                                        </th>
+                                        <th onclick="setHistorySort('client')" class="p-3 cursor-pointer hover:bg-gray-100 transition select-none">
+                                            Client <i id="sort-client" class="ph ph-arrows-down-up sort-icon text-gray-300 ml-1"></i>
+                                        </th>
+                                        <th onclick="setHistorySort('agent')" class="p-3 hidden md:table-cell cursor-pointer hover:bg-gray-100 transition select-none">
+                                            Collaborateur SGS <i id="sort-agent" class="ph ph-arrows-down-up sort-icon text-gray-300 ml-1"></i>
+                                        </th>
+                                        <th onclick="setHistorySort('cat')" class="p-3 hidden md:table-cell cursor-pointer hover:bg-gray-100 transition select-none">
+                                            Catégorie <i id="sort-cat" class="ph ph-arrows-down-up sort-icon text-gray-300 ml-1"></i>
+                                        </th>
+                                        <th onclick="setHistorySort('statut')" class="p-3 cursor-pointer hover:bg-gray-100 transition select-none">
+                                            Statut <i id="sort-statut" class="ph ph-arrows-down-up sort-icon text-gray-300 ml-1"></i>
+                                        </th>
+                                        <th class="p-3 w-1/3">Compte Rendu</th>
+                                        <th class="p-3 text-right">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="history-table-body">
+                                    <tr><td colspan="8" class="p-8 text-center text-gray-400"><i class="ph ph-spinner animate-spin text-2xl"></i> Chargement...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>`;
+        }
+    
+
+        
+        let currentEditingId = null; // Stocke l'ID du document ouvert
 
         function openDetail(firestoreId) {
+            currentEditingId = firestoreId;
             const call = calls.find(c => c.firestoreId === firestoreId);
             if(!call) return;
             
+            // Remplissage Lecture Seule
             document.getElementById('modal-client').innerText = call.client || '-';
             document.getElementById('modal-code').innerText = call.code || '-';
             document.getElementById('modal-date').innerText = call.dateCall || '-';
@@ -493,17 +1116,356 @@
             document.getElementById('modal-sub').innerText = call.sub || '-';
             document.getElementById('modal-cr').innerText = call.cr || "Aucune note.";
             
+            // Reset du formulaire d'édition
+            document.getElementById('edit-note').value = "";
+            
+            // Pré-cocher le bon statut
+            const currentStatus = call.status || call.statut || 'En cours';
+            const radios = document.getElementsByName('edit-status');
+            radios.forEach(r => {
+                r.checked = (r.value === currentStatus);
+            });
+            
+            // Affichage
             const modal = document.getElementById('detailModal');
             modal.classList.remove('hidden');
             setTimeout(() => modal.querySelector('div').classList.remove('scale-95', 'opacity-0'), 10);
         }
 
+        async function saveCallUpdate() {
+            if(!currentEditingId) return;
+            
+            // Récupérer le nouveau statut
+            const radios = document.getElementsByName('edit-status');
+            let newStatus = null;
+            radios.forEach(r => { if(r.checked) newStatus = r.value; });
+            
+            if(!newStatus) { alert("Veuillez sélectionner un statut."); return; }
+
+            // Récupérer la note ajoutée
+            const newNote = document.getElementById('edit-note').value.trim();
+            
+            // Mise à jour Firestore
+            try {
+                const callRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'calls', currentEditingId);
+                
+                const updateData = { status: newStatus }; // On met à jour 'status' (standardisé)
+                
+                // Si une note est ajoutée, on l'ajoute au CR existant avec un saut de ligne
+                if(newNote) {
+                    // On récupère l'ancien CR depuis le DOM ou la liste locale
+                    const oldCR = document.getElementById('modal-cr').innerText;
+                    const timestamp = new Date().toLocaleString('fr-FR');
+                    const separator = oldCR === "Aucune note." ? "" : "\n\n";
+                    updateData.cr = `${oldCR === "Aucune note." ? "" : oldCR}${separator}[${timestamp}] ${newNote}`;
+                }
+
+                await window.updateDoc(callRef, updateData);
+                
+                // Feedback et fermeture
+                closeDetail();
+                // Pas besoin de recharger, le listener onSnapshot le fera automatiquement
+                
+            } catch (e) {
+                console.error("Erreur update:", e);
+                alert("Erreur lors de la sauvegarde : " + e.message);
+            }
+        }
+
         function closeDetail() {
+    
             const modal = document.getElementById('detailModal');
             modal.querySelector('div').classList.add('scale-95', 'opacity-0');
             setTimeout(() => modal.classList.add('hidden'), 200);
         }
     </script>
+
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+        /* Style pour masquer proprement */
+        .hidden { display: none !important; }
+    </style>
+
+
+    <script>
+                let appSettings = {};
+// --- SÉCURITÉ : DÉFINITION PRÉALABLE ---
+        // Ces fonctions vides empêchent les erreurs "Not Defined" si l'utilisateur
+        // interagit avec la page avant le chargement complet des modules.
+        window.onSearchFocus = function() { console.log("Chargement en cours..."); };
+        window.filterCentres = function() { };
+        window.toggleSingleSelection = function() { };
+        window.validateSelection = function() { };
+        window.toggleSelectAll = function() { };
+        // // window.handleExternalContact = function() { }; (Définition déplacée)(Supprimé)
+
+// --- GESTION DES APPLICATIONS (LISTE STATIQUE) ---
+window.populateAppSelect = function() {
+    const appSelect = document.getElementById('select-app');
+    if (!appSelect) return;
+
+    // Réinitialisation de la liste déroulante
+    appSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
+
+    // Remplissage avec les clés de appSettings
+    if (window.appSettings) {
+        const sortedApps = Object.keys(window.appSettings).sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
+        sortedApps.forEach(app => {
+            // Mise en majuscule de la première lettre
+            const displayApp = app.charAt(0).toUpperCase() + app.slice(1);
+            appSelect.innerHTML += `<option value="${app}">${displayApp}</option>`;
+        });
+    }
+    // On appelle aussi updateCategoryOptions pour s\'assurer que la catégorie est vide
+    window.updateCategoryOptions();
+};;
+
+window.updateCategoryOptions = function() {
+    const appSelect = document.getElementById('select-app');
+    const catSelect = document.getElementById('select-cat');
+    
+    if (!appSelect || !catSelect) return;
+
+    const selectedApp = appSelect.value;
+    const categories = window.appSettings[selectedApp] || []; 
+
+    catSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
+
+    if (categories.length > 0) {
+        catSelect.disabled = false;
+        categories.sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' })); // Tri alphabétique
+        categories.forEach(cat => {
+            // Mise en majuscule de la première lettre
+            const displayCat = cat.charAt(0).toUpperCase() + cat.slice(1);
+            catSelect.innerHTML += `<option value="${cat}">${displayCat}</option>`;
+        });
+    } else {
+        catSelect.disabled = true; 
+    }
+};
+    // window.loadAppSettings = function() { console.log("Attente module..."); }; (Supprimé)
+    </script>
+    
+</head>
+<body class="bg-gray-100 text-gray-800 h-screen flex overflow-hidden font-sans">
+
+    
+    <div id="loading-overlay" class="fixed inset-0 z-[200] bg-white/95 backdrop-blur-md hidden flex flex-col items-center justify-center transition-all duration-500">
+        <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-sm border border-gray-100 flex flex-col items-center text-center transform scale-100 transition-transform">
+            <div class="mb-6 relative">
+                <div class="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center relative z-10">
+                     <i class="ph ph-circle-notch text-3xl text-[#F58220] animate-spin"></i>
+                </div>
+                <div class="absolute inset-0 bg-orange-100 rounded-full animate-ping opacity-20"></div>
+            </div>
+            
+            <h2 class="text-xl font-bold text-gray-800 tracking-tight mb-1">Initialisation</h2>
+            <p class="text-xs text-gray-400 mb-6 font-medium uppercase tracking-wide">Veuillez patienter...</p>
+            
+            <div id="loading-steps" class="w-full space-y-3 text-left pl-2">
+                </div>
+        </div>
+    </div>
+    
+    <div id="auth-overlay" class="fixed inset-0 z-50 bg-gray-800/90 backdrop-blur-sm flex items-center justify-center transition-opacity duration-500">
+        <div class="bg-white p-10 rounded-xl shadow-2xl w-full max-w-[400px] relative border border-gray-200">
+            
+            <div class="flex flex-col items-center mb-8">
+                <div class="w-60 h-auto mb-6 flex items-center justify-center">
+                    <img src="Logo.png" alt="Logo SGS" class="object-contain w-full">
+                </div>
+                <h2 class="text-xl font-bold text-gray-800 tracking-tight uppercase text-center text-lg leading-tight">Application de saisie<br>et de suivi des appels</h2>
+                <div class="h-1 w-12 bg-[#F58220] mt-4 rounded-full"></div>
+            </div>
+
+            
+            <form id="loginForm" class="space-y-5">
+                
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">Adresse Email</label>
+                    <div class="flex shadow-sm rounded-lg">
+                        <div class="relative flex-1">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="ph ph-user text-gray-400"></i>
+                            </div>
+                            <input type="text" id="auth-username" class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-l-lg border-r-0 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#F58220] focus:border-[#F58220] sm:text-sm transition-all bg-gray-50 focus:bg-white" placeholder="prenom.nom" required>
+                        </div>
+                        <div class="bg-gray-100 border border-gray-300 border-l-0 rounded-r-lg px-3 flex items-center text-gray-500 font-bold text-sm select-none shrink-0">
+                            @sgs.com
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">Mot de passe</label>
+                    <div class="relative group">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="ph ph-lock text-gray-400 group-focus-within:text-[#F58220] transition-colors"></i>
+                        </div>
+                        <input type="password" id="auth-password" class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#F58220] focus:border-[#F58220] sm:text-sm transition-all bg-gray-50 focus:bg-white" placeholder="••••••••" required>
+                    </div>
+                </div>
+
+                <div id="auth-error" class="hidden animate-pulse">
+                    <div class="flex items-center gap-2 text-red-600 text-xs font-bold bg-red-50 p-3 rounded-lg border border-red-100">
+                        <i class="ph ph-warning-circle text-lg"></i>
+                        <span>Identifiants incorrects</span>
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-[#F58220] hover:bg-[#d1650b] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#F58220] transition-all active:scale-[0.98]">
+                    <span id="btn-text">SE CONNECTER</span>
+                    <i id="btn-spinner" class="ph ph-spinner animate-spin hidden ml-2"></i>
+                </button>
+            </form>
+    
+
+            <div class="mt-8 text-center border-t border-gray-100 pt-4">
+                <p class="text-xs text-gray-400">Application interne &copy; 2025</p>
+            </div>
+        </div>
+    </div>
+    
+    <aside class="w-64 bg-white border-r border-gray-200 flex flex-col z-10 shadow-sm">
+        <div class="p-6 flex justify-center border-b border-gray-100">
+            <div class="w-60 h-60 rounded-xl overflow-hidden flex items-center justify-center bg-white p-2 transition-transform hover:scale-105">
+                <img src="Logo.png" alt="Logo" class="w-full h-full object-contain">
+            </div>
+        </div>
+        
+        <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
+
+            <button onclick="navigate('entry')" id="btn-entry" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl hover:bg-gray-50 text-[#9fa0a2] transition-colors">
+                <i class="ph ph-phone-plus text-lg"></i> Nouvel Appel
+            </button>
+            <button onclick="navigate('dashboard')" id="btn-dashboard" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl hover:bg-gray-50 text-[#9fa0a2] transition-colors">
+                <i class="ph ph-chart-pie-slice text-lg"></i> Tableau de Bord
+            </button>
+            <button onclick="navigate('history')" id="btn-history" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl hover:bg-gray-50 text-[#9fa0a2] transition-colors">
+                <i class="ph ph-clock-counter-clockwise text-lg"></i> Historique
+            </button>
+            <button onclick="navigate('followup')" id="btn-followup" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl hover:bg-gray-50 text-[#9fa0a2] transition-colors">
+                <i class="ph ph-list-checks text-lg"></i> Suivi des Actions
+                <span id="badge-todo" class="hidden ml-auto bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">!</span>
+            </button>
+
+        </nav>
+        
+            
+            <div class="p-4 border-t border-gray-100 mt-2">
+            <div id="sidebar-user-display" class="mb-3 px-2 text-xs font-bold text-gray-500 text-center truncate bg-gray-50 py-2 rounded-lg border border-gray-100">
+                <i class="ph ph-user-circle text-lg align-middle mr-1"></i> <span id="user-email-span">...</span>
+            </div>
+            <button id="logout-btn"  class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl hover:bg-red-50 text-red-500 transition-colors border border-transparent hover:border-red-100">
+                <i class="ph ph-sign-out text-lg"></i> Déconnexion
+            </button>
+        </div>
+    </aside>
+
+    <div class="hidden bg-white p-4 flex justify-between items-center border-b border-gray-200 sticky top-0 z-20 blur-sm pointer-events-none transition-all duration-300">
+        <img src="logo.png" alt="Logo" class="h-8 w-auto">
+        <button id="mobile-menu-trigger" class="p-2 text-gray-600 rounded-lg hover:bg-gray-100">
+            <i class="ph ph-list text-2xl"></i>
+        </button>
+    </div>
+
+    <div id="mobile-sidebar" class="fixed inset-0 z-30 hidden">
+        <div class="absolute inset-0 bg-black/50" onclick="toggleMobileMenu()"></div>
+        <aside class="absolute left-0 top-0 bottom-0 w-64 bg-white shadow-xl flex flex-col">
+            <div class="p-6 flex justify-between items-center border-b border-gray-100">
+                <span class="font-bold text-lg text-[#F58220]">Menu</span>
+                <button onclick="toggleMobileMenu()"><i class="ph ph-x text-xl"></i></button>
+            </div>
+            <nav class="flex-1 p-4 space-y-2">
+                <button onclick="navigate('entry');toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-gray-600 hover:bg-gray-50"><i class="ph ph-phone-plus text-lg"></i> Nouvel Appel</button>
+                <button onclick="navigate('dashboard');toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-gray-600 hover:bg-gray-50"><i class="ph ph-chart-pie-slice text-lg"></i> Tableau de Bord</button>
+                <button onclick="navigate('history');toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-gray-600 hover:bg-gray-50"><i class="ph ph-clock-counter-clockwise text-lg"></i> Historique</button>
+                <button onclick="navigate('followup');toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-gray-600 hover:bg-gray-50"><i class="ph ph-list-checks text-lg"></i> Suivi des Actions</button>
+                
+                <button id="mobile-logout-btn"  class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-red-500 hover:bg-red-50 mt-4"><i class="ph ph-sign-out text-lg"></i> Déconnexion</button>
+            </nav>
+        </aside>
+    </div>
+
+    <main class="flex-1 flex flex-col h-full relative bg-gray-50/50 blur-sm pointer-events-none transition-all duration-300">
+        <div id="app-content" class="flex-1 overflow-y-auto p-4 md:p-8"></div>
+    </main>
+
+    
+    <div id="detailModal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center fade-in backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden border border-gray-200 flex flex-col max-h-[90vh]">
+            
+            <div class="bg-[#F58220] p-4 flex justify-between items-center text-white shrink-0">
+                <h3 class="font-bold text-lg flex items-center gap-2"><i class="ph ph-pencil-simple-line"></i> Traitement du Dossier</h3>
+                <button onclick="closeDetail()" class="hover:bg-white/20 rounded-full p-1 transition"><i class="ph ph-x text-xl"></i></button>
+            </div>
+
+            <div class="p-6 space-y-4 overflow-y-auto">
+                <div class="flex justify-between items-start border-b border-gray-100 pb-4">
+                    <div>
+                        <p class="text-xs font-bold text-gray-400 uppercase">Client / Centre</p>
+                        <p class="font-bold text-xl text-[#76787B]" id="modal-client">-</p>
+                        <p class="text-sm font-mono text-[#F58220]" id="modal-code">-</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xs font-bold text-gray-400 uppercase">Date & Collab.</p>
+                        <p class="font-bold text-gray-800" id="modal-date">-</p>
+                        <p class="text-xs text-gray-500 italic mt-1" id="modal-agent">-</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div><p class="text-xs font-bold text-gray-400 uppercase">Catégorie</p><p class="font-medium text-gray-700" id="modal-cat">-</p></div>
+                    <div><p class="text-xs font-bold text-gray-400 uppercase">Sous-catégorie</p><p class="font-medium text-gray-700" id="modal-sub">-</p></div>
+                </div>
+
+                <div class="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                    <p class="text-xs font-bold text-[#F58220] uppercase mb-2 flex items-center gap-1"><i class="ph ph-note-pencil"></i> Historique du Compte Rendu</p>
+                    <p class="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap" id="modal-cr">Aucun contenu.</p>
+                </div>
+
+                <div class="bg-orange-50 rounded-xl p-4 border border-orange-200 mt-4">
+                    <h4 class="text-sm font-bold text-orange-800 uppercase mb-3 flex items-center gap-2"><i class="ph ph-gear"></i> Actions & Mise à jour</h4>
+                    
+                    <label class="text-xs font-bold text-gray-500 uppercase block mb-2">Nouveau Statut</label>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="edit-status" value="Clôturé" class="peer hidden">
+                            <div class="p-2 text-center rounded-lg bg-white border border-gray-200 text-gray-500 hover:bg-green-50 peer-checked:bg-green-500 peer-checked:text-white peer-checked:border-green-500 peer-checked:font-bold transition-all text-xs">Clôturé</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="edit-status" value="En cours" class="peer hidden">
+                            <div class="p-2 text-center rounded-lg bg-white border border-gray-200 text-gray-500 hover:bg-blue-50 peer-checked:bg-blue-500 peer-checked:text-white peer-checked:border-blue-500 peer-checked:font-bold transition-all text-xs">En cours</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="edit-status" value="À traiter" class="peer hidden">
+                            <div class="p-2 text-center rounded-lg bg-white border border-gray-200 text-gray-500 hover:bg-orange-50 peer-checked:bg-orange-400 peer-checked:text-white peer-checked:border-orange-400 peer-checked:font-bold transition-all text-xs">À traiter</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="edit-status" value="À rappeler" class="peer hidden">
+                            <div class="p-2 text-center rounded-lg bg-white border border-gray-200 text-gray-500 hover:bg-red-50 peer-checked:bg-red-500 peer-checked:text-white peer-checked:border-red-500 peer-checked:font-bold transition-all text-xs">À Rappeler</div>
+                        </label>
+                    </div>
+
+                    <label class="text-xs font-bold text-gray-500 uppercase block mb-2">Ajouter une note (Optionnel)</label>
+                    <textarea id="edit-note" rows="2" class="w-full p-3 rounded-lg border border-gray-300 focus:border-orange-500 focus:ring-1 focus:ring-orange-200 outline-none text-sm" placeholder="Ex: Client rappelé, dossier clos..."></textarea>
+                </div>
+            </div>
+
+            <div class="p-4 bg-gray-50 border-t border-gray-100 flex justify-between items-center shrink-0">
+                <button onclick="closeDetail()" class="text-gray-500 hover:text-gray-700 font-medium text-sm">Annuler</button>
+                <button onclick="saveCallUpdate()" class="px-6 py-2 bg-[#F58220] text-white font-bold rounded-lg hover:bg-[#d9731c] transition flex items-center gap-2 shadow-md shadow-orange-100">
+                    <i class="ph ph-floppy-disk"></i> Sauvegarder
+                </button>
+            </div>
+        </div>
+    </div>
+    
 
     <script type="module">
 
@@ -511,8 +1473,13 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
     import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, setPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, collection, addDoc, setDoc, getDoc, getDocs, doc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, setDoc, getDoc, getDocs, updateDoc, doc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
     
+    
+    // --- Correction ReferenceError ---
+    // const appSettings est déportée dans la portée globale (window.appSettings) par le code initial.
+// --- SECURITE AMELIOREE : La configuration devrait être chargée depuis un fichier .env ou un backend ---
+function getFirebaseConfig() {
     const firebaseConfig = {
           apiKey: "AIzaSyDHljgMTJUNFxixyGCNmHa5x3C50pC3S2w",
           authDomain: "centre-appels.firebaseapp.com",
@@ -522,11 +1489,16 @@
           appId: "1:127271081032:web:782416a501242cd353f47d",
           measurementId: "G-R28JM1CJEX"
         };
+    return firebaseConfig;
+}
 
         // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
+        const app = initializeApp(getFirebaseConfig());
         const analytics = getAnalytics(app);
         const auth = getAuth(app);
+        
+        // Ajout de l'ID pour le nouvel overlay
+        const loadingOverlay = document.getElementById('loading-overlay');
 
     // --- PERSISTANCE SESSION ---
     setPersistence(auth, browserSessionPersistence)
@@ -543,9 +1515,18 @@
         window.db = db;
         window.appId = appId;
         window.doc = doc;
-        window.getDoc = getDoc;
+        window.updateDoc = updateDoc;
+        window.setDoc = setDoc;
+        
+    // --- LOGIQUE UX : CHIPS / TAGS (Bloc redondant supprimé) ---
+    
+window.getDoc = getDoc;
+
+
         window.getDocs = getDocs;
         window.collection = collection;
+
+
 
         // Éléments UI
         const authOverlay = document.getElementById('auth-overlay');
@@ -556,17 +1537,103 @@
         const userDisplay = document.getElementById('user-display');
         const appElements = document.querySelectorAll('body > aside, body > .sticky, body > #mobile-sidebar, body > main');
 
-        // Gestion de l'état de connexion
+        // Fonction pour mettre à jour le statut du spinner
+        
+        // Fonction pour mettre à jour le statut du spinner (Version UI Améliorée)
+        window.updateSpinnerStep = function(id, text, isDone = false) {
+            const container = document.getElementById('loading-steps');
+            let step = document.getElementById(id);
+            
+            if (!step) {
+                // Création de l'étape
+                const div = document.createElement('div');
+                div.id = id;
+                div.className = "flex items-center gap-3 text-sm text-gray-500 transition-all duration-300 transform translate-x-0 opacity-0 animate-fade-in-right";
+                // Petite animation d'entrée via style direct pour l'exemple, ou classe CSS si dispo
+                div.style.animation = "slideIn 0.3s forwards";
+                
+                div.innerHTML = `
+                    <div class="w-6 h-6 rounded-full flex items-center justify-center bg-gray-100 shrink-0 transition-colors duration-300" id="${id}-bg">
+                        <i class="ph ph-circle-notch animate-spin text-xs text-gray-400" id="${id}-icon"></i>
+                    </div>
+                    <span class="font-medium" id="${id}-text">${text}</span>
+                `;
+                container.appendChild(div);
+                // Force reflow pour l'animation
+                void div.offsetWidth; 
+                div.style.opacity = "1";
+            } else {
+                // Mise à jour
+                const textEl = document.getElementById(`${id}-text`);
+                const iconEl = document.getElementById(`${id}-icon`);
+                const bgEl = document.getElementById(`${id}-bg`);
+                
+                if (textEl) textEl.innerText = text;
+                
+                if (isDone) {
+                    if (iconEl) {
+                        iconEl.className = "ph ph-check text-xs text-white";
+                    }
+                    if (bgEl) {
+                        bgEl.classList.remove('bg-gray-100');
+                        bgEl.classList.add('bg-green-500', 'scale-110');
+                    }
+                    step.classList.add('text-green-700');
+                } else {
+                     // Cas d'erreur ou en cours (si on réutilise)
+                     if (text.includes('Erreur')) {
+                         if(iconEl) iconEl.className = "ph ph-warning text-xs text-white";
+                         if(bgEl) { bgEl.className = "w-6 h-6 rounded-full flex items-center justify-center bg-red-500 shrink-0"; }
+                         step.classList.add('text-red-600');
+                     }
+                }
+            }
+        };
+
+        // --- NOUVEAU PROCESSUS DE CHARGEMENT SÉQUENTIEL ---
+        function startLoadingProcess(user) {
+            loadingOverlay.classList.remove('hidden');
+            
+            // Étape 1: Vérification du compte (déjà fait par Firebase)
+            window.updateSpinnerStep('step-auth', 'Authentification utilisateur OK.', true); // Authentification réussie
+
+            // Étape 2: Lancement du chargement des données (asynchrone)
+            Promise.all([
+                window.preloadCentresData(),
+                
+            ]).then(() => {
+                // Toutes les données sont prêtes
+                window.updateSpinnerStep('step-data-check', 'Vérification des données métiers : OK', true);
+                // Terminer et masquer l'overlay après un court délai
+                setTimeout(() => {
+                    loadingOverlay.classList.add('hidden'); // Masque le spinner
+                    toggleAppVisibility(true); // Affiche l'application (enlève le blur et pointer-events)
+                    // On appelle navigate('entry') après le chargement
+                    navigate('entry'); 
+                }, 2500);
+
+            }).catch(error => {
+                console.error("Erreur critique au chargement des données:", error);
+                window.updateSpinnerStep('step-data-check', `Erreur critique: ${error.message}. Rechargez.`, false);
+                // Afficher l'erreur mais laisser l'application masquée
+            });
+        }
+
+        // Gestion de l'état de connexion (MODIFIÉ)
         onAuthStateChanged(auth, (user) => {
             if (user) { 
-                if(window.preloadCentresData) window.preloadCentresData();
-                currentUser = user;
-                if(userDisplay) userDisplay.textContent = user.email;
-                toggleAppVisibility(true);
-                startFirestoreListener();
+                window.currentUser = user;
+                const userSpan = document.getElementById('user-email-span');
+                if(userSpan) userSpan.innerText = user.email;
+                
+                // --- NOUVEAU : Lance le processus de chargement ---
+                startFirestoreListener(); // Lance l'écouteur
+                startLoadingProcess(user);
+
             } else {
-                currentUser = null;
+                window.currentUser = null;
                 toggleAppVisibility(false);
+                loadingOverlay.classList.add('hidden'); // Masquer si déconnecté
             }
         });
 
@@ -582,25 +1649,38 @@
         }
 
         // Login Manuel
+        
+        // Login Manuel Optimisé
         loginForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            const email = document.getElementById('auth-email').value;
+            const email = document.getElementById('auth-username').value.trim() + '@sgs.com';
             const password = document.getElementById('auth-password').value;
 
+            // UI : État chargement bouton
             errorMsg.classList.add('hidden');
-            btnText.innerText = "Connexion...";
-            btnSpinner.classList.remove('hidden');
+            const btn = loginForm.querySelector('button[type="submit"]');
+            const originalBtnContent = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ph ph-circle-notch animate-spin text-xl"></i> Connexion...';
+            btn.classList.add('opacity-75', 'cursor-not-allowed');
 
             signInWithEmailAndPassword(auth, email, password)
+                .then(() => {
+                    // Succès : Transition immédiate vers l'écran de chargement
+                    document.getElementById('auth-overlay').classList.add('hidden');
+                    document.getElementById('loading-overlay').classList.remove('hidden');
+                    // Le onAuthStateChanged prendra le relais pour lancer startLoadingProcess
+                })
                 .catch((error) => {
                     let msg = "Erreur de connexion.";
                     if(error.code.includes('invalid-credential') || error.code.includes('wrong-password')) msg = "Identifiants incorrects.";
-                    errorMsg.innerText = msg;
+                    errorMsg.innerHTML = `<i class="ph ph-warning-circle text-lg"></i> <span>${msg}</span>`;
                     errorMsg.classList.remove('hidden');
-                })
-                .finally(() => {
-                    btnText.innerText = "Se connecter";
-                    btnSpinner.classList.add('hidden');
+                    
+                    // Reset bouton
+                    btn.disabled = false;
+                    btn.innerHTML = originalBtnContent;
+                    btn.classList.remove('opacity-75', 'cursor-not-allowed');
                 });
         });
 
@@ -619,9 +1699,19 @@
                 });
                 
                 const currentView = document.getElementById('btn-entry').classList.contains('bg-[#fef8f3]') ? 'entry' :
-                                    document.getElementById('btn-dashboard').classList.contains('bg-[#fef8f3]') ? 'dashboard' : 'history';
+                                    document.getElementById('btn-dashboard').classList.contains('bg-[#fef8f3]') ? 'dashboard' : document.getElementById('btn-followup').classList.contains('bg-[#fef8f3]') ? 'followup' : 'history';
                 
+                
+                // Mise à jour du badge
+                const todoCount = calls.filter(c => ['En cours', 'À traiter', 'À rappeler'].includes(c.status || c.statut)).length;
+                const badge = document.getElementById('badge-todo');
+                if(badge) {
+                    if(todoCount > 0) { badge.classList.remove('hidden'); badge.innerText = todoCount; }
+                    else { badge.classList.add('hidden'); }
+                }
+
                 if(currentView !== 'entry') navigate(currentView);
+            
                 
             }, (error) => {
                 console.error("Erreur Firestore:", error);
@@ -667,19 +1757,32 @@
                 e.preventDefault();
                 const btn = document.querySelector('#callForm button[type="submit"]');
                 
-                if(!currentUser) { alert("Vous devez être connecté."); return; }
+                if(!window.currentUser) { alert("Vous devez être connecté."); return; }
                 
                 const fd = new FormData(e.target);
                 const clientVal = document.getElementById('field_client').value;
                 if(!clientVal) { alert("Code centre invalide ou non chargé."); return; }
 
-                const obj = Object.fromEntries(fd.entries());
+                
+                if (!window.callDirection) { 
+                    alert('Veuillez spécifier la direction de l\'appel (Entrant/Sortant).'); 
+                    btn.disabled = false;
+                    return; 
+                }
+const obj = Object.fromEntries(fd.entries());
                 
                 // Ajout des métadonnées
-                obj.code = document.getElementById('code-centre').value;
+                // --- MISE À JOUR POUR MONO-CENTRE ---
+                // Le code centre est pris de la variable globale currentSelectedCode, 
+                // ou du champ si c'est un Contact Externe.
+                obj.code = window.currentSelectedCode || document.getElementById('code-centre').value || 'N/A';
+                // ------------------------------------
+                obj.direction = window.callDirection; // Ajout du champ direction
+
+    
                 obj.client = clientVal;
-                obj.agentId = currentUser.uid;
-                obj.agentEmail = currentUser.email;
+                obj.agentId = window.currentUser.uid;
+                obj.agentEmail = window.currentUser.email;
                 obj.timestamp = Date.now();
                 obj.dateCall = new Date().toLocaleString('fr-FR');
 
@@ -702,105 +1805,170 @@
         });
 
         // Lancer la vue par défaut
-        navigate('entry');
+        // NOTE: Ceci est lancé par startLoadingProcess après le chargement initial
 
-    // --- LOGIQUE DE SECURITE UI ---
-    function initSecurityLogic() {
-        const overlay = document.getElementById('auth-overlay');
-        const form = document.getElementById('loginForm');
         
-        onAuthStateChanged(auth, (user) => {
-            if (user) { 
-                if(window.preloadCentresData) window.preloadCentresData();
-                if(overlay) {
-                    overlay.classList.add('hidden');
-                    overlay.style.display = 'none'; 
-                }
-            } else {
-                if(overlay) {
-                    overlay.classList.remove('hidden');
-                    overlay.style.display = 'flex';
-                }
-            }
-        });
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initSecurityLogic);
-    } else {
-        initSecurityLogic();
-    }
-
-    // --- MOTEUR DE RECHERCHE INTELLIGENT (AJOUT AUTO) ---
+// --- MOTEUR DE RECHERCHE INTELLIGENT (AJOUT AUTO) ---
     
     let cachedCentresList = []; 
+    // Variable pour stocker le code du centre actuellement sélectionné
+    let currentSelectedCode = null; 
 
     // Préchargement des données pour une recherche rapide
     window.preloadCentresData = async function() {
-        if (cachedCentresList.length > 0) return;
+        if (cachedCentresList.length > 0) {
+             window.updateSpinnerStep('step-centres', 'Centres de services chargés (Cache)', true);
+             return;
+        }
         try {
-            console.log("Chargement du cache des centres...");
-            // Utilisation des variables globales db et appId définies plus haut
+            window.updateSpinnerStep('step-centres', 'Chargement des centres de services...');
+            
             const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'centres');
             const snapshot = await getDocs(colRef);
             cachedCentresList = snapshot.docs.map(doc => ({ code: doc.id, ...doc.data() }));
-            console.log(`${cachedCentresList.length} centres en cache.`);
-        } catch (e) { console.error("Erreur cache:", e); }
-    };
-
-    // Fonction de filtrage (Code OU Nom)
-    window.filterCentres = function(text) {
-        const box = document.getElementById('suggestions-box');
-        const inputVal = text.trim().toUpperCase();
-        if (inputVal.length < 1) { box.classList.add('hidden'); box.innerHTML = ''; return; }
-
-        const results = cachedCentresList.filter(c => {
-            const codeMatch = c.code.toUpperCase().includes(inputVal);
-            const nameMatch = (c.nom || "").toUpperCase().includes(inputVal);
-            return codeMatch || nameMatch;
-        });
-
-        if (results.length > 0) {
-            box.innerHTML = results.map(c => `
-                <div onclick="selectCentreFromList('${c.code}')" class="p-3 hover:bg-orange-50 cursor-pointer transition flex justify-between items-center group text-left">
-                    <div><span class="font-bold text-[#F58220]">${c.code}</span><span class="text-gray-700 ml-2 font-medium">${c.nom || 'Sans nom'}</span></div>
-                    <span class="text-xs text-gray-400 group-hover:text-orange-400">${c.ville || ''}</span>
-                </div>
-            `).join('');
-            box.classList.remove('hidden');
-        } else {
-            box.innerHTML = `<div class="p-3 text-gray-400 italic text-sm">Aucun centre trouvé.</div>`;
-            box.classList.remove('hidden');
+            
+            window.updateSpinnerStep('step-centres', `Centres de services chargés (${cachedCentresList.length} trouvés)`, true);
+        } catch (e) { 
+            window.updateSpinnerStep('step-centres', 'Erreur au chargement des centres', false);
+            console.error("Erreur cache:", e); 
         }
     };
 
-    // Sélection d'un centre depuis la liste
-    window.selectCentreFromList = function(code) {
-        document.getElementById('code-centre').value = code;
-        document.getElementById('suggestions-box').classList.add('hidden');
+    
+    // Nouvelle fonction au focus : filtre uniquement
+    window.onSearchFocus = function(input) {
+        filterCentres(input.value);
+    };
+
+    // Fonction de filtrage (Code OU Nom OU Dirigeant) - Mode Mono-Centre
+    window.filterCentres = function(text) {
+        const box = document.getElementById('suggestions-box');
+        const inputVal = text ? text.trim().toUpperCase() : "";
         
-        // Remplissage du formulaire via le cache local (plus rapide)
-        const centre = cachedCentresList.find(c => c.code === code);
-        if (centre) {
+        // Cacher si moins de 2 caractères
+        if (inputVal.length < 2) {
+            box.classList.add('hidden'); 
+            return; 
+        }
+
+        if(!cachedCentresList) return; 
+        
+        const results = cachedCentresList.filter(c => {
+            const codeMatch = c.code.toUpperCase().includes(inputVal);
+            const nameMatch = (c.nom || "").toUpperCase().includes(inputVal);
+            const dirMatch = (c.dirigeant || "").toUpperCase().includes(inputVal);
+            const cityMatch = (c.ville || "").toUpperCase().includes(inputVal);
+            return codeMatch || nameMatch || dirMatch || cityMatch;
+        });
+
+        renderSuggestionsBox(results);
+    };
+    
+
+    // Rendu HTML de la boite de suggestions (Mono-Centre)
+    function renderSuggestionsBox(results) {
+        const box = document.getElementById('suggestions-box');
+        
+        if (results.length === 0) {
+            box.innerHTML = `<div class="p-3 text-gray-400 italic text-sm">Aucun résultat.</div>`;
+            box.classList.remove('hidden');
+            return;
+        }
+
+        // Liste des résultats
+        let html = results.slice(0, 10).map(c => { // Limite à 10 résultats
+            return `
+                <div onclick="toggleSingleSelection('${c.code.replace(/[']/g, "\\'")}', event)" 
+                    class="p-3 border-b border-gray-50 hover:bg-orange-50 cursor-pointer transition flex items-center gap-3 text-left">
+                    <div class="flex-1">
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold text-gray-700">${c.code}</span>
+                            <span class="text-xs text-gray-400 pl-1">${c.dirigeant ? '<i class="ph ph-user"></i> ' + c.dirigeant : ''}</span>
+                        </div>
+                        <div class="text-sm text-gray-600 truncate">${c.nom || 'Sans nom'} - ${c.ville || 'Ville inconnue'}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        box.innerHTML = html;
+        box.classList.remove('hidden');
+    }
+
+    // Gestion du click sur une ligne (Sélectionne et valide le centre)
+    window.toggleSingleSelection = function(code, event) {
+        if(event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+
+        currentSelectedCode = code; // Stocke le code sélectionné
+        
+        // 1. Remplir le champ de recherche
+        const input = document.getElementById('code-centre');
+        input.value = code; 
+
+        // 2. Valider et remplir le formulaire
+        validateSelection(code);
+
+        // 3. Cacher la boîte de suggestions
+        document.getElementById('suggestions-box').classList.add('hidden');
+    };
+    
+    // Validation finale et remplissage (Mono-Centre)
+    window.validateSelection = function(code) {
+        
+        if (!code) return;
+
+        // Reset UI (Cache la boite de suggestion)
+        document.getElementById('suggestions-box').classList.add('hidden');
+        // Suppression de la réinitialisation du select Contact Externe
+        
+        // Show Sections (Force l'affichage des sections Centre, Dirigeants et CR)
+        document.getElementById('section-centre-info').classList.remove('hidden');
+        document.getElementById('section-dirigeants').classList.remove('hidden');
+        document.getElementById('section-cr').classList.remove('hidden');
+        document.getElementById('btn-submit').classList.remove('hidden');
+
+        // Appel de la fonction pour remplir le formulaire
+        window.fillSingleCentre(code);
+    };
+
+    // Fonction de remplissage des champs à partir du code (Mono-Centre)
+    window.fillSingleCentre = function(code) {
+         // updateHistoryPreview est défini ailleurs, mais on l'appelle ici
+         if (window.updateHistoryPreview) window.updateHistoryPreview(code); 
+         
+         const centre = cachedCentresList.find(c => c.code === code);
+         if (centre) {
+            // Mise à jour de la variable globale au cas où le formulaire doit la lire
+            currentSelectedCode = code; 
+            
             const fields = ['reseau', 'client', 'adresse', 'cp', 'ville', 'telephone', 'email', 'dirigeant', 'exploitant', 'rr', 'auditeur'];
             
-            // Mapping spécifique pour certains champs
+            // Mise à jour du nom commercial (Nom Client)
             if(document.getElementById('field_client')) document.getElementById('field_client').value = centre.nom || '';
             
             fields.forEach(f => {
-                // Gestion des différences de nommage (ex: telephone vs tel)
-                let key = f;
-                if(f === 'telephone') key = 'tel';
-                if(f === 'client') key = 'nom';
-                
-                const el = document.getElementById('field_' + f);
-                if(el) el.value = centre[key] || '';
+                let key = f; if(f === 'telephone') key = 'tel'; if(f === 'client') key = 'nom';
+                const el = document.getElementById('field_' + f); if(el) el.value = centre[key] || '';
             });
             
             if(centre.dirigeant && window.loadDirigeantInfo) window.loadDirigeantInfo(centre.dirigeant);
             else document.getElementById('dirigeant-info-box')?.classList.add('hidden');
+        } else {
+             // Nettoyer les champs si le code n'est pas trouvé (sécurité)
+             const fields = ['reseau', 'client', 'adresse', 'cp', 'ville', 'telephone', 'email', 'dirigeant', 'exploitant', 'rr', 'auditeur'];
+             fields.forEach(f => {
+                 const el = document.getElementById('field_' + f);
+                 if(el) el.value = '';
+             });
         }
     };
+    
+    // Redirection pour compatibilité si nécessaire
+    window.selectCentreFromList = window.fillSingleCentre;
+    
 
     // Fermeture de la liste au clic extérieur
     document.addEventListener('click', function(e) {
@@ -810,97 +1978,56 @@
     });
 
 
-    // --- GESTION DES MODES D'AFFICHAGE ---
+    // --- AJOUT DE LA FONCTION MANQUANTE POUR LE PARAMÉTRAGE/SELECT ---
+    
+    
+    // --- GESTION PARAMÉTRAGE (Applications & Catégories) ---
+    
+    // Chargement des settings depuis Firestore (simulé ou réel)
+    
 
-    window.resetForm = function() {
-        // Reset Inputs
-        document.getElementById('code-centre').value = "";
-        document.getElementById('contact-externe-select').value = "";
-        
-        // Hide All Sections
-        document.getElementById('section-centre-info').classList.add('hidden');
-        document.getElementById('section-dirigeants').classList.add('hidden');
-        document.getElementById('section-cr').classList.add('hidden');
-        document.getElementById('btn-submit').classList.add('hidden');
+    function renderAppCard(app) {
+        const cats = window.appSettings[app] || [];
+        return `
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden group">
+            <div class="bg-gray-50 p-3 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="font-bold text-gray-700">${app}</h3>
+                <button onclick="deleteApp('${app}')" class="text-red-400 hover:text-red-600 p-1"><i class="ph ph-trash"></i></button>
+            </div>
+            <div class="p-4">
+                <ul class="space-y-2 mb-4 max-h-40 overflow-y-auto">
+                    ${cats.map((cat, index) => `
+                        <li class="flex justify-between items-center text-sm bg-gray-50 px-3 py-2 rounded-lg">
+                            <span>${cat}</span>
+                            <button onclick="deleteCategory('${app}', ${index})" class="text-gray-400 hover:text-red-500"><i class="ph ph-x"></i></button>
+                        </li>
+                    `).join('')}
+                    ${cats.length === 0 ? '<li class="text-xs text-gray-400 italic">Aucune catégorie</li>' : ''}
+                </ul>
+                <div class="flex gap-2">
+                    <input type="text" id="new-cat-${app.replace(/\s/g, '')}" class="flex-1 p-2 border rounded-lg text-sm outline-none focus:border-orange-500" placeholder="Nouvelle catégorie...">
+                    <button onclick="addCategory('${app}')" class="bg-gray-100 text-gray-600 px-3 rounded-lg hover:bg-gray-200"><i class="ph ph-plus"></i></button>
+                </div>
+            </div>
+        </div>
+        `;
+    }
 
-        // Reset Fields visually
-        const inputs = document.querySelectorAll('input[readonly]');
-        inputs.forEach(i => i.value = "");
-    };
-
-    // SCÉNARIO B : CONTACT EXTERNE
-    window.handleExternalContact = function(val) {
-        if(!val) { resetForm(); return; }
-
-        // 1. Reset côté centre
-        document.getElementById('code-centre').value = "EXTERNE"; // Marqueur pour le code
-        document.getElementById('suggestions-box').classList.add('hidden');
-        
-        // 2. Hide Infos Centre & Dirigeants
-        document.getElementById('section-centre-info').classList.add('hidden');
-        document.getElementById('section-dirigeants').classList.add('hidden');
-
-        // 3. Show CR & Submit
-        document.getElementById('section-cr').classList.remove('hidden');
-        document.getElementById('btn-submit').classList.remove('hidden');
-
-        // 4. Injecter la valeur dans le champ Client (caché ou readonly) pour la sauvegarde
-        // On utilise le champ field_client existant pour stocker le type de contact
-        document.getElementById('field_client').value = val; 
-    };
-
-    // MODIFICATION DE LA SÉLECTION LISTE (SCÉNARIO A)
-    // On remplace l'ancienne fonction selectCentreFromList
-    window.selectCentreFromList = function(code) {
-        // Reset côté externe
-        document.getElementById('contact-externe-select').value = "";
-
-        // UI Updates
-        document.getElementById('code-centre').value = code;
-        document.getElementById('suggestions-box').classList.add('hidden');
-        
-        // SHOW ALL SECTIONS
-        document.getElementById('section-centre-info').classList.remove('hidden');
-        document.getElementById('section-dirigeants').classList.remove('hidden');
-        document.getElementById('section-cr').classList.remove('hidden');
-        document.getElementById('btn-submit').classList.remove('hidden');
-
-        // DATA FILLING
-        const centre = cachedCentresList.find(c => c.code === code);
-        if (centre) {
-            const fields = ['reseau', 'client', 'adresse', 'cp', 'ville', 'telephone', 'email', 'dirigeant', 'exploitant', 'rr', 'auditeur'];
-            
-            if(document.getElementById('field_client')) document.getElementById('field_client').value = centre.nom || '';
-            
-            fields.forEach(f => {
-                let key = f;
-                if(f === 'telephone') key = 'tel';
-                if(f === 'client') key = 'nom';
-                
-                const el = document.getElementById('field_' + f);
-                if(el) el.value = centre[key] || '';
-            });
-            
-            if(centre.dirigeant && window.loadDirigeantInfo) window.loadDirigeantInfo(centre.dirigeant);
-            else document.getElementById('dirigeant-info-box')?.classList.add('hidden');
-        }
-    };
+    
 
 
-    // PATCH pour checkCentre pour qu'il affiche les sections
-    const originalCheckCentre = window.checkCentre;
-    window.checkCentre = async function(code) {
-        // Logique UI d'affichage
-        document.getElementById('section-centre-info').classList.remove('hidden');
-        document.getElementById('section-dirigeants').classList.remove('hidden');
-        document.getElementById('section-cr').classList.remove('hidden');
-        document.getElementById('btn-submit').classList.remove('hidden');
-        document.getElementById('contact-externe-select').value = "";
-        
-        // Appel logique existante
-        await originalCheckCentre(code);
-    };
+
+    
+
+
+
+// --- REMPLACEMENT DU DUBLON PAR LA SAUVEGARDE EN TEMPS RÉEL ---
+
+
+
+
     
 </script>
+
 </body>
 </html>
