@@ -1,11 +1,12 @@
 <!DOCTYPE html>
+
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Application de Suivi</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Application de Suivi</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
     // --- SECURITY FIX: Fonction d'échappement XSS (Ajouté par script) ---
     window.escapeHTML = function(str) {
         if (str === null || str === undefined) return '';
@@ -20,7 +21,7 @@
             .replace(/'/g, '&#039;');
     };
 </script>
-    <script>
+<script>
         // Configuration Globale
         // --- CORRIGÉ : Déclaration vide. Les paramètres sont chargés depuis Firestore via appSettings.
         const CATEGORIES = {};
@@ -829,6 +830,8 @@ window.resetCallDirection = function() {
                             <tr>
                                 <th class="p-3 font-medium">Date</th>
                                 <th class="p-3 font-medium">Collaborateur SGS</th>
+                                <th class="p-3 font-medium">App</th>
+                                <th class="p-3 font-medium">Catégorie</th>
                                 <th class="p-3 font-medium">Statut</th>
                                 <th class="p-3 font-medium w-1/2">Note Rapide</th>
                             </tr>
@@ -1374,7 +1377,7 @@ window.resetCallDirection = function() {
 
         // --- 4. RENDU HTML (Lignes) ---
         const html = paginatedData.map(c => `
-            <tr class="border-b last:border-0 hover:bg-gray-50 transition group">
+            <tr ondblclick="window.openDetail('${c.firestoreId}')" class="border-b last:border-0 hover:bg-gray-50 transition group cursor-pointer hover:bg-orange-50" title="Double-clic pour modifier">
                 <td class="p-3 font-mono text-xs text-gray-500">${window.escapeHTML(c.dateCall)}</td>
                 <td class="p-3 font-bold text-gray-700 text-sm">${window.escapeHTML(c.code)}</td>
                 <td class="p-3"><div class="font-bold text-[#76787B] text-sm truncate w-32 md:w-auto">${window.escapeHTML(c.client)}</div></td>
@@ -1757,20 +1760,16 @@ window.resetCallDirection = function() {
             setTimeout(() => modal.classList.add('hidden'), 200);
         }
     </script>
-
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
-    <style>
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
         .fade-in { animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
         /* Style pour masquer proprement */
         .hidden { display: none !important; }
     </style>
-
-
-    <script>
+<script>
                 let appSettings = {};
 // --- SÉCURITÉ : DÉFINITION PRÉALABLE ---
         // Ces fonctions vides empêchent les erreurs "Not Defined" si l'utilisateur
@@ -1828,226 +1827,282 @@ window.updateCategoryOptions = function() {
 };
     // window.loadAppSettings = function() { console.log("Attente module..."); }; (Supprimé)
     </script>
+<style id="sidebar-styles-v4">
+    /* --- CSS SIDEBAR AVANCÉ (V4) --- */
     
-</head>
+    /* A. COMPORTEMENT GLOBAL */
+    #desktop-sidebar.compact {
+        width: 5.5rem !important;
+    }
+    
+    /* B. LOGIQUE INFOBULLE (TOOLTIP) */
+    /* Par défaut (menu ouvert), le texte est juste du texte à côté de l'icône. */
+    /* En mode compact, on le transforme en bulle. */
+    
+    #desktop-sidebar.compact .menu-text {
+        position: absolute;
+        left: 100%; /* Juste à droite du bouton */
+        top: 50%;
+        transform: translateY(-50%) translateX(10px); /* Centré vert. + décalé un peu */
+        
+        background-color: #374151; /* Gris foncé (Tailwind gray-700) */
+        color: white;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: bold;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        z-index: 9999; /* Au dessus de tout */
+        
+        /* État initial caché */
+        opacity: 0;
+        visibility: hidden;
+        width: auto; /* Largeur auto selon le texte */
+        pointer-events: none; /* Pour ne pas gêner le clic */
+        
+        /* Petit triangle à gauche de la bulle (optionnel mais joli) */
+        border-left: 3px solid #F58220; 
+    }
+
+    /* Affichage au survol UNIQUEMENT en mode compact */
+    #desktop-sidebar.compact button:hover .menu-text {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(-50%) translateX(15px); /* Petite animation de glissement */
+    }
+
+    /* C. AUTRES AJUSTEMENTS COMPACT */
+    #desktop-sidebar.compact button {
+        justify-content: center !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+    
+    #desktop-sidebar.compact #badge-todo {
+        display: none !important;
+    }
+
+    /* D. HEADER & LOGO */
+    #logo-wrapper {
+        transition: all 0.3s;
+        width: 12rem;
+        overflow: hidden;
+    }
+    #desktop-sidebar.compact #logo-wrapper {
+        width: 0;
+        opacity: 0;
+        padding: 0; margin: 0;
+    }
+    #desktop-sidebar.compact .border-b::after {
+        content: '';
+        display: block;
+        width: 40px; height: 40px;
+        background-image: url('Logo.png');
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+        margin-right: 10px;
+    }
+    #desktop-sidebar.compact .border-b {
+        display: flex; align-items: center; justify-content: center;
+        padding: 1rem 0.5rem;
+    }
+    #desktop-sidebar.compact #sidebar-toggle-btn {
+        transform: rotate(180deg);
+        right: 50%;
+        margin-right: -16px;
+        top: 60px;
+        border: none;
+        background: transparent;
+    }
+    </style></head>
 <body class="bg-gray-100 text-gray-800 h-screen flex overflow-hidden font-sans">
-
-    
-    <div id="loading-overlay" class="fixed inset-0 z-[200] bg-white/95 backdrop-blur-md hidden flex flex-col items-center justify-center transition-all duration-500">
-        <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-sm border border-gray-100 flex flex-col items-center text-center transform scale-100 transition-transform">
-            <div class="mb-6 relative">
-                <div class="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center relative z-10">
-                     <i class="ph ph-circle-notch text-3xl text-[#F58220] animate-spin"></i>
-                </div>
-                <div class="absolute inset-0 bg-orange-100 rounded-full animate-ping opacity-20"></div>
-            </div>
-            
-            <h2 class="text-xl font-bold text-gray-800 tracking-tight mb-1">Initialisation</h2>
-            <p class="text-xs text-gray-400 mb-6 font-medium uppercase tracking-wide">Veuillez patienter...</p>
-            
-            <div id="loading-steps" class="w-full space-y-3 text-left pl-2">
-                </div>
-        </div>
-    </div>
-    
-    <div id="auth-overlay" class="fixed inset-0 z-50 bg-gray-800/90 backdrop-blur-sm flex items-center justify-center transition-opacity duration-500">
-        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-[400px] relative border border-gray-200">
-            
-            <div class="flex flex-col items-center mb-6">
-                <div class="w-60 h-auto mb-6 flex items-center justify-center">
-                    <img src="Logo.png" alt="Logo SGS" class="object-contain w-full">
-                </div>
-                <h2 class="text-xl font-bold text-gray-800 tracking-tight uppercase text-center text-lg leading-tight">Application de saisie<br>et de suivi des appels</h2>
-                <div class="h-1 w-12 bg-[#F58220] mt-4 rounded-full"></div>
-            </div>
-
-            
-            <form id="loginForm" class="space-y-5">
-                
-                <div class="space-y-1">
-                    <label class="text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">Adresse Email</label>
-                    <div class="flex shadow-sm rounded-lg">
-                        <div class="relative flex-1">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <i class="ph ph-user text-gray-400"></i>
-                            </div>
-                            <input type="text" id="auth-username" class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-l-lg border-r-0 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#F58220] focus:border-[#F58220] sm:text-sm transition-all bg-gray-50 focus:bg-white" placeholder="prenom.nom" required>
-                        </div>
-                        <div class="bg-gray-100 border border-gray-300 border-l-0 rounded-r-lg px-3 flex items-center text-gray-500 font-bold text-sm select-none shrink-0">
+<div class="fixed inset-0 z-[200] bg-white/95 backdrop-blur-md hidden flex flex-col items-center justify-center transition-all duration-500" id="loading-overlay">
+<div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-sm border border-gray-100 flex flex-col items-center text-center transform scale-100 transition-transform">
+<div class="mb-6 relative">
+<div class="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center relative z-10">
+<i class="ph ph-circle-notch text-3xl text-[#F58220] animate-spin"></i>
+</div>
+<div class="absolute inset-0 bg-orange-100 rounded-full animate-ping opacity-20"></div>
+</div>
+<h2 class="text-xl font-bold text-gray-800 tracking-tight mb-1">Initialisation</h2>
+<p class="text-xs text-gray-400 mb-6 font-medium uppercase tracking-wide">Veuillez patienter...</p>
+<div class="w-full space-y-3 text-left pl-2" id="loading-steps">
+</div>
+</div>
+</div>
+<div class="fixed inset-0 z-50 bg-gray-800/90 backdrop-blur-sm flex items-center justify-center transition-opacity duration-500" id="auth-overlay">
+<div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-[400px] relative border border-gray-200">
+<div class="flex flex-col items-center mb-6">
+<div class="w-60 h-auto mb-6 flex items-center justify-center">
+<img alt="Logo SGS" class="object-contain w-full" src="Logo.png"/>
+</div>
+<h2 class="text-xl font-bold text-gray-800 tracking-tight uppercase text-center text-lg leading-tight">Application de saisie<br/>et de suivi des appels</h2>
+<div class="h-1 w-12 bg-[#F58220] mt-4 rounded-full"></div>
+</div>
+<form class="space-y-5" id="loginForm">
+<div class="space-y-1">
+<label class="text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">Adresse Email</label>
+<div class="flex shadow-sm rounded-lg">
+<div class="relative flex-1">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<i class="ph ph-user text-gray-400"></i>
+</div>
+<input class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-l-lg border-r-0 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#F58220] focus:border-[#F58220] sm:text-sm transition-all bg-gray-50 focus:bg-white" id="auth-username" placeholder="prenom.nom" required="" type="text"/>
+</div>
+<div class="bg-gray-100 border border-gray-300 border-l-0 rounded-r-lg px-3 flex items-center text-gray-500 font-bold text-sm select-none shrink-0">
                             @sgs.com
                         </div>
-                    </div>
-                </div>
+</div>
+</div>
+<div class="space-y-1">
+<label class="text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">Mot de passe</label>
+<div class="relative group">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<i class="ph ph-lock text-gray-400 group-focus-within:text-[#F58220] transition-colors"></i>
+</div>
+<input class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#F58220] focus:border-[#F58220] sm:text-sm transition-all bg-gray-50 focus:bg-white" id="auth-password" placeholder="••••••••" required="" type="password"/>
+</div>
+</div>
+<div class="hidden animate-pulse" id="auth-error">
+<div class="flex items-center gap-2 text-red-600 text-xs font-bold bg-red-50 p-3 rounded-lg border border-red-100">
+<i class="ph ph-warning-circle text-lg"></i>
+<span>Identifiants incorrects</span>
+</div>
+</div>
+<button class="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-[#F58220] hover:bg-[#d1650b] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#F58220] transition-all active:scale-[0.98]" type="submit">
+<span id="btn-text">SE CONNECTER</span>
+<i class="ph ph-spinner animate-spin hidden ml-2" id="btn-spinner"></i>
+</button>
+</form>
+</div>
+</div>
+<aside class="w-64 shrink-0 bg-white border-r border-gray-200 flex flex-col z-10 shadow-sm transition-all duration-300 ease-in-out relative" id="desktop-sidebar">
+<div class="p-4 flex justify-center border-b border-gray-100 relative">
+<div class="w-48 h-auto rounded-xl overflow-hidden flex items-center justify-center bg-white transition-transform hover:scale-105" id="logo-wrapper">
+<img alt="Logo" class="w-full h-auto object-contain" src="Logo.png"/>
+</div>
 
-                <div class="space-y-1">
-                    <label class="text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">Mot de passe</label>
-                    <div class="relative group">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <i class="ph ph-lock text-gray-400 group-focus-within:text-[#F58220] transition-colors"></i>
-                        </div>
-                        <input type="password" id="auth-password" class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#F58220] focus:border-[#F58220] sm:text-sm transition-all bg-gray-50 focus:bg-white" placeholder="••••••••" required>
-                    </div>
-                </div>
+<button class="absolute right-2 top-4 bg-gray-50 hover:bg-orange-100 text-gray-400 hover:text-[#F58220] border border-gray-200 rounded-lg p-1.5 transition-colors z-50" id="sidebar-toggle-btn" onclick="toggleCompactSidebar()">
+<i class="ph ph-caret-left font-bold text-lg"></i>
+</button>
+</div>
 
-                <div id="auth-error" class="hidden animate-pulse">
-                    <div class="flex items-center gap-2 text-red-600 text-xs font-bold bg-red-50 p-3 rounded-lg border border-red-100">
-                        <i class="ph ph-warning-circle text-lg"></i>
-                        <span>Identifiants incorrects</span>
-                    </div>
-                </div>
 
-                <button type="submit" class="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-[#F58220] hover:bg-[#d1650b] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#F58220] transition-all active:scale-[0.98]">
-                    <span id="btn-text">SE CONNECTER</span>
-                    <i id="btn-spinner" class="ph ph-spinner animate-spin hidden ml-2"></i>
+<nav class="flex-1 p-4 space-y-2 overflow-y-auto">
+<button class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl hover:bg-gray-50 text-[#9fa0a2] transition-colors group relative" id="btn-entry" onclick="navigate('entry')">
+<i class="ph ph-phone-plus text-lg"></i><span class="menu-text whitespace-nowrap ml-3 transition-all duration-200"> Nouvel Appel
+            </span></button>
+<button class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl hover:bg-gray-50 text-[#9fa0a2] transition-colors group relative" id="btn-dashboard" onclick="navigate('dashboard')">
+<i class="ph ph-chart-pie-slice text-lg"></i><span class="menu-text whitespace-nowrap ml-3 transition-all duration-200"> Tableau de Bord
+            </span></button>
+<button class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl hover:bg-gray-50 text-[#9fa0a2] transition-colors group relative" id="btn-history" onclick="navigate('history')">
+<i class="ph ph-clock-counter-clockwise text-lg"></i><span class="menu-text whitespace-nowrap ml-3 transition-all duration-200"> Historique
+            </span></button>
+<button class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl hover:bg-gray-50 text-[#9fa0a2] transition-colors group relative" id="btn-followup" onclick="navigate('followup')">
+<i class="ph ph-list-checks text-lg"></i><span class="menu-text whitespace-nowrap ml-3 transition-all duration-200"> Suivi des Actions
+                </span><span class="hidden ml-auto bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full" id="badge-todo">!</span>
+</button>
+<button class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl hover:bg-gray-50 text-[#9fa0a2] transition-colors group relative" id="btn-documentation" onclick="navigate('documentation')">
+<i class="ph ph-book-open text-lg"></i><span class="menu-text whitespace-nowrap ml-3 transition-all duration-200"> Documentation
+            </span></button>
+</nav>
+<div class="p-4 border-t border-gray-100 mt-2">
+<button class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl hover:bg-red-50 text-red-500 transition-colors border border-transparent hover:border-red-100 group relative" id="logout-btn">
+<i class="ph ph-sign-out text-lg"></i><span class="menu-text whitespace-nowrap ml-3 transition-all duration-200"> Déconnexion
+            </span></button>
+</div>
+</aside>
+<div class="hidden bg-white p-4 flex justify-between items-center border-b border-gray-200 sticky top-0 z-20 blur-sm pointer-events-none transition-all duration-300">
+<img alt="Logo" class="h-8 w-auto" src="logo.png"/>
+<button class="p-2 text-gray-600 rounded-lg hover:bg-gray-100" id="mobile-menu-trigger">
+<i class="ph ph-list text-2xl"></i>
+</button>
+</div>
+<div class="fixed inset-0 z-30 hidden" id="mobile-sidebar">
+<div class="absolute inset-0 bg-black/50" onclick="toggleMobileMenu()"></div>
+<aside class="absolute left-0 top-0 bottom-0 w-64 shrink-0 bg-white shadow-xl flex flex-col">
+<div class="p-6 flex justify-between items-center border-b border-gray-100">
+<span class="font-bold text-lg text-[#F58220]">Menu</span>
+<button onclick="toggleMobileMenu()"><i class="ph ph-x text-xl"></i></button>
+</div>
+<nav class="flex-1 p-4 space-y-2">
+<button class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-gray-600 hover:bg-gray-50" onclick="navigate('entry');toggleMobileMenu()"><i class="ph ph-phone-plus text-lg"></i> Nouvel Appel</button>
+<button class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-gray-600 hover:bg-gray-50" onclick="navigate('dashboard');toggleMobileMenu()"><i class="ph ph-chart-pie-slice text-lg"></i> Tableau de Bord</button>
+<button class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-gray-600 hover:bg-gray-50" onclick="navigate('history');toggleMobileMenu()"><i class="ph ph-clock-counter-clockwise text-lg"></i> Historique</button>
+<button class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-gray-600 hover:bg-gray-50" onclick="navigate('followup');toggleMobileMenu()"><i class="ph ph-list-checks text-lg"></i> Suivi des Actions</button>
+<button class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-gray-600 hover:bg-gray-50" onclick="navigate('documentation');toggleMobileMenu()"><i class="ph ph-book-open text-lg"></i> Documentation</button>
+<button class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-red-500 hover:bg-red-50 mt-4" id="mobile-logout-btn"><i class="ph ph-sign-out text-lg"></i> Déconnexion</button>
+</nav>
+</aside>
+</div>
+<main class="flex-1 flex flex-col h-full relative bg-gray-50/50 blur-sm pointer-events-none transition-all duration-300">
+<button class="absolute top-4 left-4 z-40 p-2 bg-white rounded-lg shadow-sm border border-gray-200 text-gray-600 hover:text-[#F58220] transition hidden md:flex items-center justify-center" onclick="toggleDesktopSidebar()">
+<i class="ph ph-list text-xl"></i>
+</button>
+<div class="flex-1 overflow-y-auto p-4 md:p-8" id="app-content"></div>
+</main>
+<div class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center fade-in backdrop-blur-sm" id="detailModal">
+<div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden border border-gray-200 flex flex-col max-h-[90vh]">
+<div class="bg-[#F58220] p-4 flex justify-between items-center text-white shrink-0">
+<h3 class="font-bold text-lg flex items-center gap-2"><i class="ph ph-pencil-simple-line"></i> Traitement du Dossier</h3>
+<button class="hover:bg-white/20 rounded-full p-1 transition" onclick="closeDetail()"><i class="ph ph-x text-xl"></i></button>
+</div>
+<div class="p-6 space-y-4 overflow-y-auto">
+<div class="flex justify-between items-start border-b border-gray-100 pb-4">
+<div>
+<p class="text-xs font-bold text-gray-400 uppercase">Client / Centre</p>
+<p class="font-bold text-xl text-[#76787B]" id="modal-client">-</p>
+<p class="text-sm font-mono text-[#F58220]" id="modal-code">-</p>
+</div>
+<div class="text-right">
+<p class="text-xs font-bold text-gray-400 uppercase">Date &amp; Collab.</p>
+<p class="font-bold text-gray-800" id="modal-date">-</p>
+<p class="text-xs text-gray-500 italic mt-1" id="modal-agent">-</p>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div><p class="text-xs font-bold text-gray-400 uppercase">Catégorie</p><p class="font-medium text-gray-700" id="modal-cat">-</p></div>
+<div><p class="text-xs font-bold text-gray-400 uppercase">Sous-catégorie</p><p class="font-medium text-gray-700" id="modal-sub">-</p></div>
+</div>
+<div class="bg-gray-50 rounded-xl p-4 border border-gray-200">
+<p class="text-xs font-bold text-[#F58220] uppercase mb-2 flex items-center gap-1"><i class="ph ph-note-pencil"></i> Historique du Compte Rendu</p>
+<p class="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap" id="modal-cr">Aucun contenu.</p>
+</div>
+<div class="bg-orange-50 rounded-xl p-4 border border-orange-200 mt-4">
+<h4 class="text-sm font-bold text-orange-800 uppercase mb-3 flex items-center gap-2"><i class="ph ph-gear"></i> Actions &amp; Mise à jour</h4>
+<label class="text-xs font-bold text-gray-500 uppercase block mb-2">Nouveau Statut</label>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+<label class="cursor-pointer">
+<input class="peer hidden" name="edit-status" type="radio" value="Clôturé"/>
+<div class="p-2 text-center rounded-lg bg-white border border-gray-200 text-gray-500 hover:bg-green-50 peer-checked:bg-green-500 peer-checked:text-white peer-checked:border-green-500 peer-checked:font-bold transition-all text-xs">Clôturé</div>
+</label>
+<label class="cursor-pointer">
+<input class="peer hidden" name="edit-status" type="radio" value="En cours"/>
+<div class="p-2 text-center rounded-lg bg-white border border-gray-200 text-gray-500 hover:bg-blue-50 peer-checked:bg-blue-500 peer-checked:text-white peer-checked:border-blue-500 peer-checked:font-bold transition-all text-xs">En cours</div>
+</label>
+<label class="cursor-pointer">
+<input class="peer hidden" name="edit-status" type="radio" value="À traiter"/>
+<div class="p-2 text-center rounded-lg bg-white border border-gray-200 text-gray-500 hover:bg-orange-50 peer-checked:bg-orange-400 peer-checked:text-white peer-checked:border-orange-400 peer-checked:font-bold transition-all text-xs">À traiter</div>
+</label>
+<label class="cursor-pointer">
+<input class="peer hidden" name="edit-status" type="radio" value="À rappeler"/>
+<div class="p-2 text-center rounded-lg bg-white border border-gray-200 text-gray-500 hover:bg-red-50 peer-checked:bg-red-500 peer-checked:text-white peer-checked:border-red-500 peer-checked:font-bold transition-all text-xs">À Rappeler</div>
+</label>
+</div>
+<label class="text-xs font-bold text-gray-500 uppercase block mb-2">Ajouter une note (Optionnel)</label>
+<textarea class="w-full p-3 rounded-lg border border-gray-300 focus:border-orange-500 focus:ring-1 focus:ring-orange-200 outline-none text-sm" id="edit-note" placeholder="Ex: Client rappelé, dossier clos..." rows="2"></textarea>
+</div>
+</div>
+<div class="p-4 bg-gray-50 border-t border-gray-100 flex justify-between items-center shrink-0">
+<button class="text-gray-500 hover:text-gray-700 font-medium text-sm" onclick="closeDetail()">Annuler</button>
+<button class="px-6 py-2 bg-[#F58220] text-white font-bold rounded-lg hover:bg-[#d9731c] transition flex items-center gap-2 shadow-md shadow-orange-100" onclick="saveCallUpdate()">
+<i class="ph ph-floppy-disk"></i> Sauvegarder
                 </button>
-            </form>
-    
-
-            
-        </div>
-    </div>
-    
-    <aside class="w-64 shrink-0 bg-white border-r border-gray-200 flex flex-col z-10 shadow-sm">
-        <div class="p-4 flex justify-center border-b border-gray-100">
-            <div class="w-48 h-auto rounded-xl overflow-hidden flex items-center justify-center bg-white transition-transform hover:scale-105">
-                <img src="Logo.png" alt="Logo" class="w-full h-auto object-contain">
-            </div>
-        </div>
-            </div>
-        </div>
-        
-        <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
-
-            <button onclick="navigate('entry')" id="btn-entry" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl hover:bg-gray-50 text-[#9fa0a2] transition-colors">
-                <i class="ph ph-phone-plus text-lg"></i> Nouvel Appel
-            </button>
-            <button onclick="navigate('dashboard')" id="btn-dashboard" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl hover:bg-gray-50 text-[#9fa0a2] transition-colors">
-                <i class="ph ph-chart-pie-slice text-lg"></i> Tableau de Bord
-            </button>
-            <button onclick="navigate('history')" id="btn-history" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl hover:bg-gray-50 text-[#9fa0a2] transition-colors">
-                <i class="ph ph-clock-counter-clockwise text-lg"></i> Historique
-            </button>
-            <button onclick="navigate('followup')" id="btn-followup" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl hover:bg-gray-50 text-[#9fa0a2] transition-colors">
-                <i class="ph ph-list-checks text-lg"></i> Suivi des Actions
-                <span id="badge-todo" class="hidden ml-auto bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">!</span>
-            </button>
-            <button onclick="navigate('documentation')" id="btn-documentation" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl hover:bg-gray-50 text-[#9fa0a2] transition-colors">
-                <i class="ph ph-book-open text-lg"></i> Documentation
-            </button>
-
-        </nav>
-        
-            
-            <div class="p-4 border-t border-gray-100 mt-2">
-            
-            <button id="logout-btn"  class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl hover:bg-red-50 text-red-500 transition-colors border border-transparent hover:border-red-100">
-                <i class="ph ph-sign-out text-lg"></i> Déconnexion
-            </button>
-        </div>
-    </aside>
-
-    <div class="hidden bg-white p-4 flex justify-between items-center border-b border-gray-200 sticky top-0 z-20 blur-sm pointer-events-none transition-all duration-300">
-        <img src="logo.png" alt="Logo" class="h-8 w-auto">
-        <button id="mobile-menu-trigger" class="p-2 text-gray-600 rounded-lg hover:bg-gray-100">
-            <i class="ph ph-list text-2xl"></i>
-        </button>
-    </div>
-
-    <div id="mobile-sidebar" class="fixed inset-0 z-30 hidden">
-        <div class="absolute inset-0 bg-black/50" onclick="toggleMobileMenu()"></div>
-        <aside class="absolute left-0 top-0 bottom-0 w-64 shrink-0 bg-white shadow-xl flex flex-col">
-            <div class="p-6 flex justify-between items-center border-b border-gray-100">
-                <span class="font-bold text-lg text-[#F58220]">Menu</span>
-                <button onclick="toggleMobileMenu()"><i class="ph ph-x text-xl"></i></button>
-            </div>
-            <nav class="flex-1 p-4 space-y-2">
-                <button onclick="navigate('entry');toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-gray-600 hover:bg-gray-50"><i class="ph ph-phone-plus text-lg"></i> Nouvel Appel</button>
-                <button onclick="navigate('dashboard');toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-gray-600 hover:bg-gray-50"><i class="ph ph-chart-pie-slice text-lg"></i> Tableau de Bord</button>
-                <button onclick="navigate('history');toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-gray-600 hover:bg-gray-50"><i class="ph ph-clock-counter-clockwise text-lg"></i> Historique</button>
-                <button onclick="navigate('followup');toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-gray-600 hover:bg-gray-50"><i class="ph ph-list-checks text-lg"></i> Suivi des Actions</button>
-                <button onclick="navigate('documentation');toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-gray-600 hover:bg-gray-50"><i class="ph ph-book-open text-lg"></i> Documentation</button>
-                
-                <button id="mobile-logout-btn"  class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-red-500 hover:bg-red-50 mt-4"><i class="ph ph-sign-out text-lg"></i> Déconnexion</button>
-            </nav>
-        </aside>
-    </div>
-
-    <main class="flex-1 flex flex-col h-full relative bg-gray-50/50 blur-sm pointer-events-none transition-all duration-300">
-        <div id="app-content" class="flex-1 overflow-y-auto p-4 md:p-8"></div>
-    </main>
-
-    
-    <div id="detailModal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center fade-in backdrop-blur-sm">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden border border-gray-200 flex flex-col max-h-[90vh]">
-            
-            <div class="bg-[#F58220] p-4 flex justify-between items-center text-white shrink-0">
-                <h3 class="font-bold text-lg flex items-center gap-2"><i class="ph ph-pencil-simple-line"></i> Traitement du Dossier</h3>
-                <button onclick="closeDetail()" class="hover:bg-white/20 rounded-full p-1 transition"><i class="ph ph-x text-xl"></i></button>
-            </div>
-
-            <div class="p-6 space-y-4 overflow-y-auto">
-                <div class="flex justify-between items-start border-b border-gray-100 pb-4">
-                    <div>
-                        <p class="text-xs font-bold text-gray-400 uppercase">Client / Centre</p>
-                        <p class="font-bold text-xl text-[#76787B]" id="modal-client">-</p>
-                        <p class="text-sm font-mono text-[#F58220]" id="modal-code">-</p>
-                    </div>
-                    <div class="text-right">
-                        <p class="text-xs font-bold text-gray-400 uppercase">Date & Collab.</p>
-                        <p class="font-bold text-gray-800" id="modal-date">-</p>
-                        <p class="text-xs text-gray-500 italic mt-1" id="modal-agent">-</p>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div><p class="text-xs font-bold text-gray-400 uppercase">Catégorie</p><p class="font-medium text-gray-700" id="modal-cat">-</p></div>
-                    <div><p class="text-xs font-bold text-gray-400 uppercase">Sous-catégorie</p><p class="font-medium text-gray-700" id="modal-sub">-</p></div>
-                </div>
-
-                <div class="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                    <p class="text-xs font-bold text-[#F58220] uppercase mb-2 flex items-center gap-1"><i class="ph ph-note-pencil"></i> Historique du Compte Rendu</p>
-                    <p class="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap" id="modal-cr">Aucun contenu.</p>
-                </div>
-
-                <div class="bg-orange-50 rounded-xl p-4 border border-orange-200 mt-4">
-                    <h4 class="text-sm font-bold text-orange-800 uppercase mb-3 flex items-center gap-2"><i class="ph ph-gear"></i> Actions & Mise à jour</h4>
-                    
-                    <label class="text-xs font-bold text-gray-500 uppercase block mb-2">Nouveau Statut</label>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
-                        <label class="cursor-pointer">
-                            <input type="radio" name="edit-status" value="Clôturé" class="peer hidden">
-                            <div class="p-2 text-center rounded-lg bg-white border border-gray-200 text-gray-500 hover:bg-green-50 peer-checked:bg-green-500 peer-checked:text-white peer-checked:border-green-500 peer-checked:font-bold transition-all text-xs">Clôturé</div>
-                        </label>
-                        <label class="cursor-pointer">
-                            <input type="radio" name="edit-status" value="En cours" class="peer hidden">
-                            <div class="p-2 text-center rounded-lg bg-white border border-gray-200 text-gray-500 hover:bg-blue-50 peer-checked:bg-blue-500 peer-checked:text-white peer-checked:border-blue-500 peer-checked:font-bold transition-all text-xs">En cours</div>
-                        </label>
-                        <label class="cursor-pointer">
-                            <input type="radio" name="edit-status" value="À traiter" class="peer hidden">
-                            <div class="p-2 text-center rounded-lg bg-white border border-gray-200 text-gray-500 hover:bg-orange-50 peer-checked:bg-orange-400 peer-checked:text-white peer-checked:border-orange-400 peer-checked:font-bold transition-all text-xs">À traiter</div>
-                        </label>
-                        <label class="cursor-pointer">
-                            <input type="radio" name="edit-status" value="À rappeler" class="peer hidden">
-                            <div class="p-2 text-center rounded-lg bg-white border border-gray-200 text-gray-500 hover:bg-red-50 peer-checked:bg-red-500 peer-checked:text-white peer-checked:border-red-500 peer-checked:font-bold transition-all text-xs">À Rappeler</div>
-                        </label>
-                    </div>
-
-                    <label class="text-xs font-bold text-gray-500 uppercase block mb-2">Ajouter une note (Optionnel)</label>
-                    <textarea id="edit-note" rows="2" class="w-full p-3 rounded-lg border border-gray-300 focus:border-orange-500 focus:ring-1 focus:ring-orange-200 outline-none text-sm" placeholder="Ex: Client rappelé, dossier clos..."></textarea>
-                </div>
-            </div>
-
-            <div class="p-4 bg-gray-50 border-t border-gray-100 flex justify-between items-center shrink-0">
-                <button onclick="closeDetail()" class="text-gray-500 hover:text-gray-700 font-medium text-sm">Annuler</button>
-                <button onclick="saveCallUpdate()" class="px-6 py-2 bg-[#F58220] text-white font-bold rounded-lg hover:bg-[#d9731c] transition flex items-center gap-2 shadow-md shadow-orange-100">
-                    <i class="ph ph-floppy-disk"></i> Sauvegarder
-                </button>
-            </div>
-        </div>
-    </div>
-    
-
-    <script type="module">
+</div>
+</div>
+</div>
+<script type="module">
 
     // --- IMPORTS FIREBASE ---
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -2420,6 +2475,17 @@ window.getDoc = getDoc;
                     btn.disabled = false;
                     return; 
                 }
+
+                // --- VALIDATION OBLIGATOIRE APP & CAT ---
+                const appSelect = document.getElementById('select-app');
+                const catSelect = document.getElementById('select-cat');
+                if (!appSelect.value || !catSelect.value) {
+                    alert("⚠️ Champs obligatoires manquants :\nVeuillez sélectionner une 'Application' et une 'Catégorie' pour garantir la fiabilité des statistiques.");
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                    return;
+                }
+    
 const obj = Object.fromEntries(fd.entries());
                 
                 // Ajout des métadonnées
@@ -2466,6 +2532,65 @@ const obj = Object.fromEntries(fd.entries());
     let currentSelectedCode = null; 
 
     // Préchargement des données pour une recherche rapide
+    
+    // --- FIX AJOUTÉ PAR PYTHON : Fonction d'affichage de l'historique au clic ---
+    
+    // --- FIX V2 : Fonction d'affichage avec Application et Catégorie ---
+    window.updateHistoryPreview = function(code) {
+        const box = document.getElementById('history-preview-box');
+        const tbody = document.getElementById('history-preview-rows');
+        const badge = document.getElementById('hist-count-badge');
+        
+        if (!box || !tbody) return;
+
+        if (!code) { box.classList.add('hidden'); return; }
+
+        const history = (window.calls || []).filter(c => c.code === code);
+
+        if (history.length === 0) { box.classList.add('hidden'); return; }
+
+        history.sort((a, b) => {
+            return window.parseCallDate(b.dateCall) - window.parseCallDate(a.dateCall);
+        });
+
+        const last5 = history.slice(0, 5);
+
+        const html = last5.map(c => `
+            <tr class="border-b last:border-0 hover:bg-purple-50/50 transition">
+                <td class="p-3 font-mono text-xs text-gray-500 whitespace-nowrap">${window.escapeHTML(c.dateCall.split(' ')[0])}</td>
+                <td class="p-3 text-xs font-bold text-gray-600">${window.escapeHTML(c.agentEmail ? c.agentEmail.split('@')[0] : 'Inconnu')}</td>
+                
+                <td class="p-3 text-xs text-gray-700">${window.escapeHTML(c.app_concern || '-')}</td>
+                <td class="p-3 text-xs"><span class="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded border border-gray-200">${window.escapeHTML(c.cat || c.category || '-')}</span></td>
+                
+                <td class="p-3">${window.getStatusBadge(c.status || c.statut)}</td>
+                <td class="p-3 text-xs text-gray-600 italic truncate max-w-[150px]" title="${window.escapeHTML(c.cr)}">
+                    ${window.escapeHTML(c.cr) || '-'}
+                </td>
+            </tr>
+        `).join('');
+
+        tbody.innerHTML = html;
+        if(badge) badge.innerText = `${history.length} trouvés au total`;
+        box.classList.remove('hidden'); 
+    };
+
+
+
+    
+    // --- UI : Toggle Sidebar Desktop ---
+    window.toggleDesktopSidebar = function() {
+        const sidebar = document.getElementById('desktop-sidebar');
+        if (!sidebar) return;
+        
+        // On bascule la marge négative pour cacher/montrer
+        if (sidebar.classList.contains('-ml-64')) {
+            sidebar.classList.remove('-ml-64');
+        } else {
+            sidebar.classList.add('-ml-64');
+        }
+    };
+    
     window.preloadCentresData = async function() {
         if (cachedCentresList.length > 0) {
              window.updateSpinnerStep('step-centres', 'Centres de services chargés (Cache)', true);
@@ -2679,6 +2804,79 @@ const obj = Object.fromEntries(fd.entries());
 
     
 </script>
+<script id="sidebar-script-v4">
+    window.toggleCompactSidebar = function() {
+        const sidebar = document.getElementById('desktop-sidebar');
+        sidebar.classList.toggle('compact');
+        
+        // Force le recalcul graphique
+        setTimeout(() => {
+            window.dispatchEvent(new Event('resize'));
+            if(typeof Chart !== 'undefined') {
+                Object.values(Chart.instances).forEach(chart => chart.resize());
+            }
+        }, 310);
+    };
+    </script>
+    <script>
+    // --- FONCTIONS AJOUTÉES POUR MODALES ---
+    let currentEditingId = null;
 
+    window.openDetail = function(id) {
+        currentEditingId = id;
+        const call = calls.find(c => c.firestoreId === id);
+        if(!call) return;
+        
+        document.getElementById('modal-client').innerText = call.client || '-';
+        document.getElementById('modal-code').innerText = call.code || '-';
+        document.getElementById('modal-date').innerText = call.dateCall || '-';
+        document.getElementById('modal-cr').innerText = call.cr || "Aucune note.";
+        document.getElementById('edit-note').value = "";
+        
+        // Reset radios
+        const status = call.status || call.statut || 'En cours';
+        document.getElementsByName('edit-status').forEach(r => r.checked = (r.value === status));
+        
+        document.getElementById('detailModal').classList.remove('hidden');
+    };
+
+    window.closeDetail = function() {
+        document.getElementById('detailModal').classList.add('hidden');
+        currentEditingId = null;
+    };
+
+    window.confirmDelete = function() {
+        if(!currentEditingId) return;
+        const call = calls.find(c => c.firestoreId === currentEditingId);
+        document.getElementById('del-target-code').innerText = call ? call.code : '???';
+        document.getElementById('del-verification-input').value = "";
+        document.getElementById('deleteSecurityModal').classList.remove('hidden');
+    };
+
+    window.closeDeleteModal = function() {
+        document.getElementById('deleteSecurityModal').classList.add('hidden');
+    };
+
+    window.triggerFinalDelete = function() {
+        const input = document.getElementById('del-verification-input').value.trim();
+        const call = calls.find(c => c.firestoreId === currentEditingId);
+        
+        if (!call) return;
+        
+        // VERIFICATION DE SECURITE
+        if (input !== call.code) {
+            alert("Code incorrect ! Suppression annulée.");
+            return;
+        }
+        
+        // Appel de la fonction Firestore
+        if(window.finalizeDeleteFirestore) {
+            window.finalizeDeleteFirestore(currentEditingId);
+        } else {
+            alert("Erreur: Fonction de suppression non chargée.");
+        }
+    };
+    </script>
+    
 </body>
 </html>
