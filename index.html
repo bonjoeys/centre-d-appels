@@ -6,12 +6,102 @@
     <title>Application de Suivi</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
+    // --- SECURITY FIX: Fonction d'échappement XSS (Ajouté par script) ---
+    window.escapeHTML = function(str) {
+        if (str === null || str === undefined) return '';
+        // Si c'est déjà un objet sécurisé ou un nombre, on retourne tel quel
+        if (typeof str === 'number') return str;
+        
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    };
+</script>
+    <script>
         // Configuration Globale
         // --- CORRIGÉ : Déclaration vide. Les paramètres sont chargés depuis Firestore via appSettings.
-        const CATEGORIES = {}; 
-        const CENTRES_DB = {}; 
+        const CATEGORIES = {};
+    // --- NOUVELLES VARIABLES GLOBALES ---
+    window.selectedCollab = "";
+
+    // --- FONCTIONS FILTRES ---
+    window.setCollabFilter = function(val) {
+        window.selectedCollab = val;
+        // Reset pagination
+        if(window.histState) window.histState.currentPage = 1;
         
-        let calls = [];
+        // Refresh vues
+        const currentView = document.getElementById('btn-dashboard').classList.contains('bg-[#fef8f3]') ? 'dashboard' : 
+                            document.getElementById('btn-history').classList.contains('bg-[#fef8f3]') ? 'history' : null;
+        
+        if(currentView === 'dashboard') {
+            document.getElementById('app-content').innerHTML = renderDashboard();
+            initDashboardCharts();
+        } else if (currentView === 'history') {
+            refreshHistoryTable();
+        }
+    };
+
+    // Fonction pour remplir la liste des collabs (Appelée par le listener Firestore)
+    window.populateCollabList = function() {
+        const select = document.getElementById('filter-collab');
+        if(!select) return;
+        
+        const currentVal = select.value;
+        const agents = new Set();
+        // On récupère tous les agents uniques
+        (window.calls || []).forEach(c => {
+            if(c.agentEmail) agents.add(c.agentEmail);
+        });
+        
+        const sortedAgents = Array.from(agents).sort();
+        
+        let html = '<option value="">Tous les collaborateurs</option>';
+        sortedAgents.forEach(a => {
+            const name = a.split('@')[0].replace('.', ' ');
+            const isSel = a === window.selectedCollab ? 'selected' : '';
+            html += `<option value="${a}" ${isSel} class="capitalize">${name}</option>`;
+        });
+        
+        select.innerHTML = html;
+    };
+
+    // --- FIX PAGINATION : Attacher globalement ---
+    window.changePage = function(delta) {
+        if(!window.histState) return;
+        window.histState.currentPage += delta;
+        window.refreshHistoryTable();
+    };
+ 
+        const CENTRES_DB = {};
+
+    // --- GESTION CENTRALISÉE DES COULEURS DE STATUT ---
+    window.getStatusBadge = function(status) {
+        const s = (status || "").toString();
+        // Styles de base
+        const base = "px-2 py-1 rounded-full text-xs font-bold border flex items-center w-fit gap-1";
+        
+        if(s === 'Clôturé') {
+            return `<span class="${base} bg-green-100 text-green-700 border-green-200"><i class="ph ph-check-circle"></i> ${window.escapeHTML(s)}</span>`;
+        } 
+        else if(s === 'En cours') {
+            return `<span class="${base} bg-blue-100 text-blue-700 border-blue-200"><i class="ph ph-hourglass"></i> ${window.escapeHTML(s)}</span>`;
+        } 
+        else if(s === 'À traiter') {
+            return `<span class="${base} bg-orange-100 text-orange-700 border-orange-200"><i class="ph ph-wrench"></i> ${window.escapeHTML(s)}</span>`;
+        } 
+        else if(s === 'À rappeler') {
+            return `<span class="${base} bg-yellow-100 text-yellow-700 border-yellow-200"><i class="ph ph-bell-ringing"></i> ${window.escapeHTML(s)}</span>`;
+        }
+        // Défaut (Gris)
+        return `<span class="${base} bg-gray-100 text-gray-600 border-gray-200">${window.escapeHTML(s)}</span>`;
+    };
+     
+        
+        window.calls = [];
         window.window.currentUser = null;
         window.appSettings = {
     "Agenda": [
@@ -53,6 +143,7 @@
         "bug athoris",
         "procédure facturation",
         "règlements en attente",
+        "Demande autorisation",
         "Autre"
     ],
     "Pilote": [
@@ -104,7 +195,7 @@
         window.callDirection = null; // Direction de l\'appel (Entrant/Sortant)
 
         // --- GESTION DES FILTRES DE DATE ---
-        window.dateFilter = { mode: 'month', start: null, end: null }; // Par défaut : Mois en cours
+        window.dateFilter = { mode: 'day', start: null, end: null }; // Par défaut : Mois en cours
 
         window.setDateFilter = function(mode) {
             window.dateFilter.mode = mode;
@@ -150,68 +241,85 @@
             return new Date(`${year}-${month}-${day}T${timePart || '00:00:00'}`);
         };
 
+        
         window.getFilteredCalls = function() {
             const mode = window.dateFilter.mode;
             const now = new Date();
             let start = new Date(now);
             let end = new Date(now);
 
-            // Définition des bornes
+            // Définition des bornes (Logic existante conservée)
             if (mode === 'day') {
-                start.setHours(0,0,0,0);
-                end.setHours(23,59,59,999);
+                start.setHours(0,0,0,0); end.setHours(23,59,59,999);
             } else if (mode === 'week') {
-                const day = now.getDay() || 7; // Dimanche = 7
+                const day = now.getDay() || 7; 
                 if(day !== 1) start.setHours(-24 * (day - 1));
-                start.setHours(0,0,0,0);
-                end.setHours(23,59,59,999); // Fin de semaine (ou aujourd'hui)
+                start.setHours(0,0,0,0); end.setHours(23,59,59,999);
             } else if (mode === 'month') {
-                start.setDate(1);
-                start.setHours(0,0,0,0);
-                end.setMonth(end.getMonth() + 1);
-                end.setDate(0);
-                end.setHours(23,59,59,999);
+                start.setDate(1); start.setHours(0,0,0,0);
+                end.setMonth(end.getMonth() + 1); end.setDate(0); end.setHours(23,59,59,999);
             } else if (mode === 'year') {
-                start.setMonth(0, 1);
-                start.setHours(0,0,0,0);
-                end.setMonth(11, 31);
-                end.setHours(23,59,59,999);
+                start.setMonth(0, 1); start.setHours(0,0,0,0);
+                end.setMonth(11, 31); end.setHours(23,59,59,999);
             } else if (mode === 'custom') {
                 start = window.dateFilter.start || new Date(0);
                 end = window.dateFilter.end || new Date(8640000000000000);
             } else {
-                // 'all' ou autre
-                return calls;
+                // all
+                start = new Date(0); end = new Date(8640000000000000);
             }
 
             return calls.filter(c => {
                 const cDate = window.parseCallDate(c.dateCall);
-                return cDate >= start && cDate <= end;
+                const dateMatch = cDate >= start && cDate <= end;
+                
+                // NOUVEAU : Filtre Collaborateur
+                const collabMatch = !window.selectedCollab || c.agentEmail === window.selectedCollab;
+                
+                return dateMatch && collabMatch;
             });
         };
 
+
         // Générateur HTML de la barre de filtres
+        
         window.renderFilterBar = function() {
             const m = window.dateFilter.mode;
             const cls = (target) => m === target ? 'bg-orange-100 text-orange-600 border-orange-200' : 'bg-white text-gray-600 border-gray-200';
             
+            // On lance le peuplement de la liste au rendu (petit délai pour que le DOM soit prêt)
+            setTimeout(window.populateCollabList, 100);
+
             return `
-            <div class="bg-white p-2 rounded-xl shadow-sm border border-gray-100 mb-6 flex flex-col md:flex-row gap-3 items-center justify-between animate-fade-in">
-                <div class="flex gap-2 overflow-x-auto w-full md:w-auto pb-1 md:pb-0">
+            <div class="bg-white p-2 rounded-xl shadow-sm border border-gray-100 mb-6 flex flex-col xl:flex-row gap-3 items-center justify-between animate-fade-in">
+                <div class="flex gap-2 overflow-x-auto w-full xl:w-auto pb-1 xl:pb-0">
                     <button onclick="setDateFilter('day')" data-mode="day" class="filter-btn px-4 py-2 rounded-lg border text-sm font-bold transition-colors whitespace-nowrap ${cls('day')}">Aujourd'hui</button>
                     <button onclick="setDateFilter('week')" data-mode="week" class="filter-btn px-4 py-2 rounded-lg border text-sm font-bold transition-colors whitespace-nowrap ${cls('week')}">Cette Semaine</button>
                     <button onclick="setDateFilter('month')" data-mode="month" class="filter-btn px-4 py-2 rounded-lg border text-sm font-bold transition-colors whitespace-nowrap ${cls('month')}">Ce Mois</button>
                     <button onclick="setDateFilter('year')" data-mode="year" class="filter-btn px-4 py-2 rounded-lg border text-sm font-bold transition-colors whitespace-nowrap ${cls('year')}">Cette Année</button>
+                    <button onclick="setDateFilter('all')" data-mode="all" class="filter-btn px-4 py-2 rounded-lg border text-sm font-bold transition-colors whitespace-nowrap ${cls('all')}">Tout</button>
                 </div>
-                <div class="flex gap-2 items-center bg-gray-50 p-1.5 rounded-lg border border-gray-100 w-full md:w-auto">
-                    <i class="ph ph-calendar text-gray-400"></i>
-                    <input type="date" id="filter-start" class="bg-transparent text-sm outline-none text-gray-600 w-32">
-                    <span class="text-gray-400">-</span>
-                    <input type="date" id="filter-end" class="bg-transparent text-sm outline-none text-gray-600 w-32">
-                    <button onclick="setDateFilter('custom')" class="p-1.5 bg-[#F58220] text-white rounded hover:bg-orange-600 transition"><i class="ph ph-magnifying-glass"></i></button>
+                
+                <div class="flex flex-col md:flex-row gap-2 w-full xl:w-auto">
+                    <div class="relative min-w-[200px]">
+                        <i class="ph ph-user absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <select id="filter-collab" onchange="window.setCollabFilter(this.value)" class="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg outline-none text-sm font-medium text-gray-600 cursor-pointer hover:bg-gray-100 transition">
+                            <option value="">Chargement...</option>
+                        </select>
+                        <i class="ph ph-caret-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+                    </div>
+
+                    <div class="flex gap-2 items-center bg-gray-50 p-1.5 rounded-lg border border-gray-100">
+                        <i class="ph ph-calendar text-gray-400"></i>
+                        <input type="date" id="filter-start" class="bg-transparent text-sm outline-none text-gray-600 w-28">
+                        <span class="text-gray-400">-</span>
+                        <input type="date" id="filter-end" class="bg-transparent text-sm outline-none text-gray-600 w-28">
+                        <button onclick="setDateFilter('custom')" class="p-1.5 bg-[#F58220] text-white rounded hover:bg-orange-600 transition"><i class="ph ph-magnifying-glass"></i></button>
+                    </div>
                 </div>
             </div>`;
         };
+
         
         // --- STUBS POUR COMPATIBILITÉ (Ancienne logique Multi-Centre) ---
         window.validateSelectionCore = function() {};
@@ -306,7 +414,7 @@ window.handleExternalContact = function(value) {
                 <div class="mt-4">
                     <label class="section-title">Sélectionner le Responsable Régional</label>
                     <div class="relative">
-                        <select name="contact_rr_name" id="contact-rr-select" class="w-full p-3 bg-white border border-gray-200 rounded-lg appearance-none focus:border-orange-500 outline-none font-bold text-gray-700">
+                        <select form="callForm" name="contact_rr_name" id="contact-rr-select" class="w-full p-3 bg-white border border-gray-200 rounded-lg appearance-none focus:border-orange-500 outline-none font-bold text-gray-700">
                             <option value="">-- Sélectionner --</option>
                             ${rrOptions}
                         </select>
@@ -320,11 +428,11 @@ window.handleExternalContact = function(value) {
                 <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                         <label class="section-title">Nom du Particulier</label>
-                        <input type="text" name="contact_particulier_name" class="w-full p-3 rounded-lg border bg-white border-gray-200 focus:border-orange-500 outline-none" placeholder="Nom et Prénom">
+                        <input type="text" form="callForm" name="contact_particulier_name" class="w-full p-3 rounded-lg border bg-white border-gray-200 focus:border-orange-500 outline-none" placeholder="Nom et Prénom">
                     </div>
                     <div>
                         <label class="section-title">Téléphone (facultatif)</label>
-                        <input type="tel" name="contact_particulier_phone" class="w-full p-3 rounded-lg border bg-white border-gray-200 focus:border-orange-500 outline-none" placeholder="0x xx xx xx xx">
+                        <input type="tel" form="callForm" name="contact_particulier_phone" class="w-full p-3 rounded-lg border bg-white border-gray-200 focus:border-orange-500 outline-none" placeholder="0x xx xx xx xx">
                     </div>
                 </div>
             `;
@@ -334,11 +442,11 @@ window.handleExternalContact = function(value) {
                 <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                         <label class="section-title">Nom du Prestataire / Partenaire</label>
-                        <input type="text" name="contact_prestataire_name" class="w-full p-3 rounded-lg border bg-white border-gray-200 focus:border-orange-500 outline-none" placeholder="Nom de l'entreprise ou contact">
+                        <input type="text" form="callForm" name="contact_prestataire_name" class="w-full p-3 rounded-lg border bg-white border-gray-200 focus:border-orange-500 outline-none" placeholder="Nom de l'entreprise ou contact">
                     </div>
                     <div>
                         <label class="section-title">Téléphone (facultatif)</label>
-                        <input type="tel" name="contact_prestataire_phone" class="w-full p-3 rounded-lg border bg-white border-gray-200 focus:border-orange-500 outline-none" placeholder="0x xx xx xx xx">
+                        <input type="tel" form="callForm" name="contact_prestataire_phone" class="w-full p-3 rounded-lg border bg-white border-gray-200 focus:border-orange-500 outline-none" placeholder="0x xx xx xx xx">
                     </div>
                 </div>
             `;
@@ -348,11 +456,11 @@ window.handleExternalContact = function(value) {
                 <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                         <label class="section-title">Nom Société / Contact</label>
-                        <input type="text" name="contact_demarchage_name" class="w-full p-3 rounded-lg border bg-white border-gray-200 focus:border-orange-500 outline-none" placeholder="Nom de l'entreprise ou contact">
+                        <input type="text" form="callForm" name="contact_demarchage_name" class="w-full p-3 rounded-lg border bg-white border-gray-200 focus:border-orange-500 outline-none" placeholder="Nom de l'entreprise ou contact">
                     </div>
                     <div>
                         <label class="section-title">Téléphone à Recontacter (facultatif)</label>
-                        <input type="tel" name="contact_demarchage_phone" class="w-full p-3 rounded-lg border bg-white border-gray-200 focus:border-orange-500 outline-none" placeholder="0x xx xx xx xx">
+                        <input type="tel" form="callForm" name="contact_demarchage_phone" class="w-full p-3 rounded-lg border bg-white border-gray-200 focus:border-orange-500 outline-none" placeholder="0x xx xx xx xx">
                     </div>
                 </div>
             `;
@@ -361,7 +469,7 @@ window.handleExternalContact = function(value) {
             htmlContent = `
                 <div class="mt-4">
                     <label class="section-title">Information Complémentaire</label>
-                    <textarea name="contact_autre_info" rows="2" class="w-full p-3 rounded-xl border border-gray-200 focus:border-orange-500 outline-none transition-all resize-none" placeholder="Détaillez la nature de l'appel (nom, organisme, sujet...)"></textarea>
+                    <textarea form="callForm" name="contact_autre_info" rows="2" class="w-full p-3 rounded-xl border border-gray-200 focus:border-orange-500 outline-none transition-all resize-none" placeholder="Détaillez la nature de l'appel (nom, organisme, sujet...)"></textarea>
                 </div>
             `;
             break;
@@ -445,7 +553,7 @@ window.resetCallDirection = function() {
         // --- NAVIGATION ---
         function navigate(view) {
             const container = document.getElementById('app-content');
-            ['entry', 'dashboard', 'history', 'followup'].forEach(id => {
+            ['entry', 'dashboard', 'history', 'followup', 'documentation'].forEach(id => {
                 const btn = document.getElementById('btn-' + id);
                 if (btn) {
                      if (id === view) btn.className = "w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl bg-[#fef8f3] text-[#F58220] transition-colors";
@@ -473,7 +581,7 @@ window.resetCallDirection = function() {
                 container.innerHTML = renderHistory();
             } else if(view === 'followup') {
                 container.innerHTML = renderFollowUp();
-            }
+            } else if(view === 'documentation') { container.innerHTML = renderDocumentation(); }
         }
     
         // --- LOGIQUE MÉTIER ---
@@ -535,7 +643,7 @@ window.resetCallDirection = function() {
             const csvRows = [headers.join(";")];
             calls.forEach(c => {
                 const clean = (text) => (text || "").toString().replace(/;/g, ",").replace(/[\r\n]+/gm, " ");
-                const row = [c.dateCall, clean(c.agentEmail), c.code, clean(c.client), clean(c.cat), clean(c.sub), clean(c.status || c.statut), clean(c.cr)];
+                const row = [c.dateCall, clean(c.agentEmail), c.code, clean(c.client), clean(c.cat || c.category), clean(c.sub), clean(c.status || c.statut), clean(c.cr)];
                 csvRows.push(row.join(";"));
             });
             const blob = new Blob(["\uFEFF" + csvRows.join("\\n")], { type: "text/csv;charset=utf-8;" });
@@ -615,7 +723,7 @@ window.resetCallDirection = function() {
             const csvRows = [headers.join(";")];
             calls.forEach(c => {
                 const clean = (text) => (text || "").toString().replace(/;/g, ",").replace(/[\r\n]+/gm, " ");
-                const row = [c.dateCall, clean(c.agentEmail), c.code, clean(c.client), clean(c.cat), clean(c.sub), clean(c.status || c.statut), clean(c.cr)];
+                const row = [c.dateCall, clean(c.agentEmail), c.code, clean(c.client), clean(c.cat || c.category), clean(c.sub), clean(c.status || c.statut), clean(c.cr)];
                 csvRows.push(row.join(";"));
             });
             const blob = new Blob(["\uFEFF" + csvRows.join("\n")], { type: "text/csv;charset=utf-8;" });
@@ -809,7 +917,7 @@ window.resetCallDirection = function() {
                         <div>
                             <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Catégorie</label>
                             <div class="relative">
-                                <select name="category" id="select-cat" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg appearance-none focus:border-orange-500 outline-none text-sm font-bold text-gray-700">
+                                <select name="cat" id="select-cat" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg appearance-none focus:border-orange-500 outline-none text-sm font-bold text-gray-700">
                                     <option value="">-- D'abord choisir l'app --</option>
                                 </select>
                                 <i class="ph ph-caret-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
@@ -823,19 +931,27 @@ window.resetCallDirection = function() {
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
                             <label class="cursor-pointer">
                                 <input type="radio" name="status" value="Clôturé" class="peer hidden" checked>
-                                <div class="p-3 text-center rounded-xl bg-white border hover:bg-green-50 peer-checked:bg-green-500 peer-checked:text-white peer-checked:border-green-500 transition-all font-bold text-sm">Clôturé</div>
-                            </label>
-                            <label class="cursor-pointer">
-                                <input type="radio" name="status" value="En cours" class="peer hidden">
-                                <div class="p-3 text-center rounded-xl bg-white border hover:bg-blue-50 peer-checked:bg-blue-500 peer-checked:text-white peer-checked:border-blue-500 transition-all font-bold text-sm">En cours</div>
-                            </label>
-                            <label class="cursor-pointer">
-                                <input type="radio" name="status" value="À traiter" class="peer hidden">
-                                <div class="p-3 text-center rounded-xl bg-white border hover:bg-orange-50 peer-checked:bg-orange-400 peer-checked:text-white peer-checked:border-orange-400 transition-all font-bold text-sm">À traiter</div>
+                                <div class="p-3 text-center rounded-xl bg-white border border-gray-200 text-gray-500 hover:bg-green-50 peer-checked:bg-green-500 peer-checked:text-white peer-checked:border-green-500 transition-all font-bold text-sm flex items-center justify-center gap-2">
+                                    <i class="ph ph-check"></i> Clôturé
+                                </div>
                             </label>
                             <label class="cursor-pointer">
                                 <input type="radio" name="status" value="À rappeler" class="peer hidden">
-                                <div class="p-3 text-center rounded-xl bg-white border hover:bg-red-50 peer-checked:bg-red-500 peer-checked:text-white peer-checked:border-red-500 transition-all font-bold text-sm">À Rappeler</div>
+                                <div class="p-3 text-center rounded-xl bg-white border border-gray-200 text-gray-500 hover:bg-yellow-50 peer-checked:bg-yellow-400 peer-checked:text-white peer-checked:border-yellow-400 peer-checked:shadow-md transition-all font-bold text-sm flex items-center justify-center gap-2">
+                                    <i class="ph ph-bell-ringing"></i> À Rappeler
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="status" value="En cours" class="peer hidden">
+                                <div class="p-3 text-center rounded-xl bg-white border border-gray-200 text-gray-500 hover:bg-blue-50 peer-checked:bg-blue-500 peer-checked:text-white peer-checked:border-blue-500 transition-all font-bold text-sm flex items-center justify-center gap-2">
+                                    <i class="ph ph-hourglass"></i> En cours
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="status" value="À traiter" class="peer hidden">
+                                <div class="p-3 text-center rounded-xl bg-white border border-gray-200 text-gray-500 hover:bg-orange-50 peer-checked:bg-orange-400 peer-checked:text-white peer-checked:border-orange-400 transition-all font-bold text-sm flex items-center justify-center gap-2">
+                                    <i class="ph ph-wrench"></i> À traiter
+                                </div>
                             </label>
                         </div>
                     </div>
@@ -860,28 +976,20 @@ window.resetCallDirection = function() {
             const filteredCalls = window.getFilteredCalls();
             const totalCalls = filteredCalls.length;
             
-            // Calcul des stats Statut
+            // Calcul des stats Statut (KPIs)
             const statusStats = { "Clôturé": 0, "En cours": 0, "À traiter": 0, "À rappeler": 0 };
             filteredCalls.forEach(c => { const s = c.status || c.statut; if(statusStats[s] !== undefined) statusStats[s]++; });
 
-            // Calcul KPIs avancés
-            // 1. Apps
-            const appCounts = {};
-            filteredCalls.forEach(c => { 
-                const app = c.app_concern || 'Non défini';
-                appCounts[app] = (appCounts[app] || 0) + 1;
-            });
-
-            // 2. RRs (Top 5)
+            // Calcul Top RR (Pour le tableau du bas)
             const rrCounts = {};
             filteredCalls.forEach(c => {
-                // On essaie de trouver le RR via le champ direct ou via la recherche centre
-                let rr = c.rr || 'Inconnu';
-                // Si c'est un contact externe RR, le nom est parfois dans 'client' ou un champ spécifique, 
-                // mais ici on se base sur les champs standards.
-                rrCounts[rr] = (rrCounts[rr] || 0) + 1;
+                if (c.code === 'CONTACT_EXTERNE' && c.client === 'Responsable Régional') {
+                    let name = c.contact_rr_name || c.rr || 'Inconnu';
+                    rrCounts[name] = (rrCounts[name] || 0) + 1;
+                }
             });
-            const sortedRRs = Object.entries(rrCounts).sort((a,b) => b[1] - a[1]).slice(0, 5);
+            // Top 10 pour la vue large
+            const sortedRRs = Object.entries(rrCounts).sort((a,b) => b[1] - a[1]).slice(0, 10);
 
             return `
                 <div class="fade-in space-y-6">
@@ -912,123 +1020,229 @@ window.resetCallDirection = function() {
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                            <h3 class="font-bold text-gray-700 mb-4 flex items-center gap-2"><i class="ph ph-squares-four text-[#F58220]"></i> Volume par Application</h3>
-                            <div class="h-64"><canvas id="chartApps"></canvas></div>
-                        </div>
-
-                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                            <h3 class="font-bold text-gray-700 mb-4 flex items-center gap-2"><i class="ph ph-list-numbers text-[#F58220]"></i> Top 5 Motifs (Catégories)</h3>
-                            <div class="h-64"><canvas id="chartCats"></canvas></div>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        
-                        <div class="md:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                            <h3 class="font-bold text-gray-700 mb-4 flex items-center gap-2"><i class="ph ph-users text-blue-500"></i> Top Sollicitations par RR</h3>
-                            <div class="overflow-x-auto">
-                                <table class="w-full text-sm text-left">
-                                    <thead class="text-xs text-gray-400 uppercase bg-gray-50">
-                                        <tr><th class="p-2 rounded-l-lg">Responsable Régional</th><th class="p-2 text-right rounded-r-lg">Volume</th></tr>
-                                    </thead>
-                                    <tbody class="divide-y divide-gray-50">
-                                        ${sortedRRs.map(([rr, count]) => `
-                                            <tr>
-                                                <td class="p-3 font-medium text-gray-700">${rr === 'undefined' ? 'Non assigné' : rr}</td>
-                                                <td class="p-3 text-right font-bold text-[#F58220]">${count}</td>
-                                            </tr>
-                                        `).join('') || '<tr><td colspan="2" class="p-4 text-center text-gray-400 italic">Pas assez de données</td></tr>'}
-                                    </tbody>
-                                </table>
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col">
+                            <h3 class="font-bold text-gray-700 mb-4 flex items-center gap-2"><i class="ph ph-chart-donut text-[#F58220]"></i> Répartition Globale</h3>
+                            <div class="h-64 relative">
+                                <canvas id="chartSunburst"></canvas>
+                                <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                    
+                                </div>
                             </div>
+                            <p class="text-xs text-gray-400 mt-2 text-center">App (Int.) / Cat (Ext.)</p>
                         </div>
 
                         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center">
-                            <h3 class="font-bold text-gray-700 mb-2 text-center">Direction des Appels</h3>
-                            <div class="h-48 w-full"><canvas id="chartDirection"></canvas></div>
+                            <h3 class="font-bold text-gray-700 mb-2 text-center w-full"><i class="ph ph-arrows-left-right text-[#F58220]"></i> Direction des Appels</h3>
+                            <div class="h-64 w-full"><canvas id="chartDirection"></canvas></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-bold text-gray-700 flex items-center gap-2"><i class="ph ph-grid-four text-[#F58220]"></i> Matrice d'Incidents (App x Catégorie)</h3>
+                            <span class="text-[10px] bg-orange-50 text-orange-600 px-3 py-1 rounded-full border border-orange-100 font-bold">Vue Détail</span>
+                        </div>
+                        <div class="overflow-x-auto border border-gray-50 rounded-lg">
+                            <div id="matrix-container" class="min-w-full">
+                                <div class="p-4 text-center text-gray-400 italic">Chargement des données...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <h3 class="font-bold text-gray-700 mb-4 flex items-center gap-2"><i class="ph ph-medal text-[#F58220]"></i> Top Sollicitations Responsables Régionaux</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm text-left">
+                                <thead class="text-xs text-gray-400 uppercase bg-gray-50">
+                                    <tr><th class="p-3 rounded-l-lg">Nom du RR</th><th class="p-3 text-right rounded-r-lg">Volume d'appels</th></tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-50">
+                                    ${sortedRRs.map(([rr, count]) => `
+                                        <tr class="hover:bg-orange-50/50 transition">
+                                            <td class="p-3 font-medium text-gray-700">${window.escapeHTML(rr) === 'undefined' ? 'Non assigné' : rr}</td>
+                                            <td class="p-3 text-right font-bold text-[#F58220]">${count}</td>
+                                        </tr>
+                                    `).join('') || '<tr><td colspan="2" class="p-4 text-center text-gray-400 italic">Pas assez de données</td></tr>'}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>`;
         }
-        
 
-        
-        function initDashboardCharts() {
+        window.initDashboardCharts = function() {
             const filteredCalls = window.getFilteredCalls();
             
-            // --- 1. DATA PREP : APPS ---
-            const appCounts = {};
+            // --- A. DONNÉES POUR SUNBURST & MATRICE ---
+            const dataTree = {}; 
+            const matrixData = {};
+            const appTotals = {};
+            const catTotals = {};
+            const allCats = new Set();
+
             filteredCalls.forEach(c => { 
                 const app = c.app_concern || 'Autre';
-                appCounts[app] = (appCounts[app] || 0) + 1;
+                const cat = c.cat || c.category || 'Non classé'; // Compatibilité
+                
+                // Arbre pour Sunburst
+                if(!dataTree[app]) dataTree[app] = { total: 0, cats: {} };
+                dataTree[app].total++;
+                if(!dataTree[app].cats[cat]) dataTree[app].cats[cat] = 0;
+                dataTree[app].cats[cat]++;
+
+                // Données pour Matrice
+                if(!matrixData[app]) matrixData[app] = {};
+                if(!matrixData[app][cat]) matrixData[app][cat] = 0;
+                matrixData[app][cat]++;
+                
+                appTotals[app] = (appTotals[app] || 0) + 1;
+                catTotals[cat] = (catTotals[cat] || 0) + 1;
+                allCats.add(cat);
             });
-            // Tri par volume
-            const sortedApps = Object.entries(appCounts).sort((a,b) => b[1] - a[1]);
+
+            // --- B. RENDU GRAPHIQUE SUNBURST (Chart.js) ---
             
-            new Chart(document.getElementById('chartApps'), {
-                type: 'doughnut',
-                data: {
-                    labels: sortedApps.map(x => x[0]),
-                    datasets: [{
-                        data: sortedApps.map(x => x[1]),
-                        backgroundColor: ['#F58220', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#6366f1'],
-                        borderWidth: 2,
-                        borderColor: '#ffffff'
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, cutout: '60%', plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11 } } } } }
+            // 1. Préparation des données aplaties et alignées
+            let sbLabels = [];
+            let sbDataInner = []; // Apps
+            let sbDataOuter = []; // Cats
+            let sbColorsInner = [];
+            let sbColorsOuter = [];
+
+            // Palette de couleurs de base
+            const baseColors = ['#F58220', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#6366f1', '#ec4899'];
+            
+            // Tri des apps par volume pour le Sunburst
+            const sortedAppsForChart = Object.keys(dataTree).sort((a,b) => dataTree[b].total - dataTree[a].total);
+
+            sortedAppsForChart.forEach((app, index) => {
+                // Niveau 1 : L'App
+                sbLabels.push(app);
+                sbDataInner.push(dataTree[app].total);
+                
+                const color = baseColors[index % baseColors.length];
+                sbColorsInner.push(color);
+
+                // Niveau 2 : Les Catégories de cette App
+                // On trie aussi les sous-catégories par volume
+                const sortedSubCats = Object.keys(dataTree[app].cats).sort((a,b) => dataTree[app].cats[b] - dataTree[app].cats[a]);
+                
+                sortedSubCats.forEach((cat, cIndex) => {
+                    sbDataOuter.push(dataTree[app].cats[cat]);
+                    // Couleur dérivée (même teinte)
+                    sbColorsOuter.push(color); 
+                });
             });
 
-            // --- 2. DATA PREP : TOP CATEGORIES ---
-            const catCounts = {};
-            filteredCalls.forEach(c => {
-                const cat = c.cat || 'Non classé';
-                catCounts[cat] = (catCounts[cat] || 0) + 1;
-            });
-            const topCats = Object.entries(catCounts).sort((a,b) => b[1] - a[1]).slice(0, 5);
+            const ctx = document.getElementById('chartSunburst');
+            if(ctx) {
+                const existingChart = Chart.getChart("chartSunburst");
+                if (existingChart) existingChart.destroy();
 
-            new Chart(document.getElementById('chartCats'), {
-                type: 'bar',
-                data: {
-                    labels: topCats.map(x => x[0]),
-                    datasets: [{
-                        label: 'Appels',
-                        data: topCats.map(x => x[1]),
-                        backgroundColor: '#F58220',
-                        borderRadius: 6
-                    }]
-                },
-                options: { 
-                    indexAxis: 'y', 
-                    responsive: true, 
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: { x: { grid: { display: false } }, y: { grid: { display: false } } }
-                }
-            });
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: sortedAppsForChart,
+                        datasets: [{
+                            label: 'Appels',
+                            data: sbDataInner,
+                            backgroundColor: sbColorsInner,
+                            borderWidth: 2,
+                            borderColor: '#ffffff',
+                            hoverOffset: 10
+                        }]
+                    },
+                    options: { 
+                        responsive: true, 
+                        maintainAspectRatio: false, 
+                        cutout: '65%', 
+                        plugins: { 
+                            legend: { position: 'bottom', labels: { boxWidth: 12, usePointStyle: true, font: { size: 11 } } },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.label || '';
+                                        let value = context.raw || 0;
+                                        let total = context.chart._metasets[context.datasetIndex].total;
+                                        let percentage = Math.round((value / total) * 100) + '%';
+                                        return label + ': ' + value + ' (' + percentage + ')';
+                                    }
+                                }
+                            }
+                        } 
+                    }
+                });
+            }
 
-            // --- 3. DATA PREP : DIRECTION ---
-            let entrant = 0, sortant = 0;
+            // --- C. RENDU MATRICE (Heatmap HTML) ---
+            
+            const sortedApps = Object.keys(matrixData).sort((a,b) => appTotals[b] - appTotals[a]);
+            const sortedCats = Array.from(allCats).sort((a,b) => catTotals[b] - catTotals[a]).slice(0, 8);
+
+            let html = '<table class="w-full text-sm text-left border-collapse">';
+            html += '<thead class="sticky top-0 z-10 shadow-sm"><tr class="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-200">';
+            html += '<th class="p-3 font-bold bg-gray-100/90 backdrop-blur border-r border-gray-200 rounded-tl-lg text-[#F58220]">Application</th>';
+            sortedCats.forEach(cat => {
+                const shortCat = cat.length > 15 ? cat.substring(0, 15) + '...' : cat;
+                html += `<th class="p-2 font-bold bg-gray-50/90 backdrop-blur text-center w-24 border-r border-gray-100" title="${cat}">${shortCat}</th>`;
+            });
+            html += '</tr></thead>';
+
+            html += '<tbody class="divide-y divide-gray-50">';
+            sortedApps.forEach(app => {
+                html += `<tr class="hover:bg-orange-50/30 transition group">`;
+                html += `<td class="p-3 font-bold text-gray-700 border-r border-gray-100 bg-white group-hover:bg-orange-50/30 whitespace-nowrap">${app}</td>`;
+                
+                sortedCats.forEach(cat => {
+                    const count = matrixData[app][cat] || 0;
+                    const intensity = Math.min(count / 10, 1); 
+                    let bgStyle = '';
+                    let textClass = 'text-gray-300';
+                    let content = '-';
+
+                    if (count > 0) {
+                        bgStyle = `background-color: rgba(245, 130, 32, ${0.1 + (intensity * 0.9)})`; 
+                        textClass = intensity > 0.5 ? 'text-white font-bold' : 'text-orange-900 font-bold';
+                        content = count;
+                    }
+                    html += `<td class="p-2 text-center ${textClass} border-r border-dotted border-gray-100 transition-transform hover:scale-105 cursor-default" style="${bgStyle}" title="${app} : ${cat} (${count})">${content}</td>`;
+                });
+                html += `</tr>`;
+            });
+            html += '</tbody></table>';
+
+            const container = document.getElementById('matrix-container');
+            if(container) container.innerHTML = html;
+            
+            // --- D. GRAPHIQUE DIRECTION (Reload) ---
+             let entrant = 0, sortant = 0;
             filteredCalls.forEach(c => {
                 if(c.direction === 'Entrant') entrant++;
                 else if(c.direction === 'Sortant') sortant++;
             });
 
-            new Chart(document.getElementById('chartDirection'), {
-                type: 'pie',
-                data: {
-                    labels: ['Entrant', 'Sortant'],
-                    datasets: [{
-                        data: [entrant, sortant],
-                        backgroundColor: ['#10b981', '#3b82f6'], // Vert pour entrant, Bleu pour sortant
-                        borderWidth: 2,
-                        borderColor: '#ffffff'
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
-            });
+            const ctxDir = document.getElementById('chartDirection');
+            if(ctxDir) {
+                 const existingChartDir = Chart.getChart("chartDirection");
+                 if (existingChartDir) existingChartDir.destroy();
+                 
+                 new Chart(ctxDir, {
+                    type: 'pie',
+                    data: {
+                        labels: ['Entrant', 'Sortant'],
+                        datasets: [{
+                            data: [entrant, sortant],
+                            backgroundColor: ['#10b981', '#3b82f6'], 
+                            borderWidth: 2,
+                            borderColor: '#ffffff'
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+                });
+            }
         };
+    
+
         function renderFollowUp() {
             // Filtrage des appels à traiter
             const todoCalls = calls.filter(c => {
@@ -1039,23 +1253,21 @@ window.resetCallDirection = function() {
             // Tri : Les plus anciens d'abord ? Ou les plus récents ?
             const rows = todoCalls.sort((a,b) => (a.dateCall < b.dateCall ? 1 : -1)).map(c => `
                 <tr class="border-b last:border-0 hover:bg-orange-50/40 transition group">
-                    <td class="p-3 font-mono text-xs text-gray-500">${c.dateCall}</td>
-                    <td class="p-3 font-bold text-gray-700 text-sm">${c.code}</td>
-                    <td class="p-3"><div class="font-bold text-[#76787B] text-sm truncate w-32 md:w-auto">${c.client}</div></td>
-                    <td class="p-3 text-xs hidden md:table-cell text-gray-500">${c.agentEmail || 'Inconnu'}</td>
-                    <td class="p-3 text-sm hidden md:table-cell"><span class="px-2 py-1 rounded bg-gray-100 text-gray-600 text-xs">${c.cat}</span></td>
-                    <td class="p-3">
-                        <span class="px-2 py-1 rounded-full text-xs font-bold ${(c.status || c.statut) === 'À rappeler' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}">${c.status || c.statut}</span>
-                    </td>
+                    <td class="p-3 font-mono text-xs text-gray-500">${window.escapeHTML(c.dateCall)}</td>
+                    <td class="p-3 font-bold text-gray-700 text-sm">${window.escapeHTML(c.code)}</td>
+                    <td class="p-3"><div class="font-bold text-[#76787B] text-sm truncate w-32 md:w-auto">${window.escapeHTML(c.client)}</div></td>
+                    <td class="p-3 text-xs hidden md:table-cell text-gray-500">${window.escapeHTML(c.agentEmail) || 'Inconnu'}</td>
+                    <td class="p-3 text-sm hidden md:table-cell"><span class="px-2 py-1 rounded bg-gray-100 text-gray-600 text-xs">${window.escapeHTML(c.cat || c.category)}</span></td>
+                    <td class="p-3">${window.getStatusBadge(c.status || c.statut)}</td>
                     <td class="p-3 w-1/3">
-                        <p class="text-xs text-gray-600 line-clamp-2 leading-relaxed max-w-md" title="${c.cr || ''}">${c.cr || '<span class="italic text-gray-300">Aucun commentaire</span>'}</p>
+                        <p class="text-xs text-gray-600 line-clamp-2 leading-relaxed max-w-md" title="${window.escapeHTML(c.cr) || ''}">${window.escapeHTML(c.cr) || '<span class="italic text-gray-300">Aucun commentaire</span>'}</p>
                     </td>
-                    <td class="p-3 text-right"><button onclick="openDetail('${c.firestoreId}')" class="p-2 bg-white border border-orange-200 text-orange-500 hover:bg-orange-500 hover:text-white rounded-lg transition"><i class="ph ph-pencil-simple text-lg"></i></button></td>
+                    
                 </tr>
             `).join('');
 
             return `
-                <div class="fade-in">
+                <div id="view-history" class="fade-in">
                     <div class="flex justify-between items-end mb-6">
                         <div>
                             <h2 class="text-2xl font-bold text-orange-600 flex items-center gap-2"><i class="ph ph-list-checks"></i> Suivi des Actions</h2>
@@ -1077,10 +1289,10 @@ window.resetCallDirection = function() {
                                         <th class="p-3 hidden md:table-cell">Catégorie</th>
                                         <th class="p-3">Statut</th>
                                         <th class="p-3 w-1/3">Note</th>
-                                        <th class="p-3 text-right">Action</th>
+                                        
                                     </tr>
                                 </thead>
-                                <tbody>${rows || '<tr><td colspan="8" class="p-8 text-center italic text-gray-400">Aucune action en attente. Bon travail ! <i class="ph ph-smiley"></i></td></tr>'}</tbody>
+                                <tbody>${rows || '<tr><td colspan="7" class="p-8 text-center italic text-gray-400">Aucune action en attente. Bon travail ! <i class="ph ph-smiley"></i></td></tr>'}</tbody>
                             </table>
                         </div>
                     </div>
@@ -1091,36 +1303,37 @@ window.resetCallDirection = function() {
         
     // --- GESTION AVANCÉE HISTORIQUE (TRIS & FILTRES) ---
     let histState = {
-        sortCol: 'timestamp', // Par défaut : date/heure
-        sortAsc: false,       // Par défaut : le plus récent en premier
+        sortCol: 'timestamp',
+        sortAsc: false,
         filterText: '',
-        filterStatus: ''
+        filterStatus: '',
+        currentPage: 1,      // Page par défaut
+        itemsPerPage: 10     // Nombre de lignes par page
     };
 
     // Fonction principale qui calcule et affiche les lignes
+    
+    // --- FONCTION DE RAFRAICHISSEMENT AVEC PAGINATION ---
     window.refreshHistoryTable = function() {
         const tbody = document.getElementById('history-table-body');
         const countSpan = document.getElementById('history-count');
+        const paginationContainer = document.getElementById('pagination-controls'); // Nouveau conteneur
+        
         if(!tbody) return;
 
-        // 1. FILTRAGE PAR DATE (D'abord)
+        // 1. FILTRAGE
         const dateFiltered = window.getFilteredCalls();
-
-        // 2. FILTRAGE PAR TEXTE/STATUT
+        
         let filtered = dateFiltered.filter(c => {
             const searchStr = (histState.filterText || '').toLowerCase();
             const statusFilter = histState.filterStatus;
             
-            // Données normalisées
             const code = (c.code || '').toLowerCase();
             const client = (c.client || '').toLowerCase();
             const agent = (c.agentEmail || '').toLowerCase();
             const statut = (c.status || c.statut || '').toString();
 
-            // Match Texte (Code, Client ou Agent)
             const textMatch = !searchStr || code.includes(searchStr) || client.includes(searchStr) || agent.includes(searchStr);
-            
-            // Match Statut
             const statusMatch = !statusFilter || statut === statusFilter;
 
             return textMatch && statusMatch;
@@ -1129,25 +1342,16 @@ window.resetCallDirection = function() {
         // 2. TRI
         filtered.sort((a, b) => {
             let valA, valB;
-
-            // Sélection de la valeur selon la colonne
             if (histState.sortCol === 'timestamp') {
-                valA = a.timestamp || 0; 
-                valB = b.timestamp || 0;
+                valA = a.timestamp || 0; valB = b.timestamp || 0;
             } else if (histState.sortCol === 'dateCall') {
-                // Tri par date string (moins précis but fallback)
-                valA = a.dateCall || ''; 
-                valB = b.dateCall || '';
+                valA = a.dateCall || ''; valB = b.dateCall || '';
             } else if (histState.sortCol === 'statut') {
-                valA = (a.status || a.statut || '').toLowerCase();
-                valB = (b.status || b.statut || '').toLowerCase();
+                valA = (a.status || a.statut || '').toLowerCase(); valB = (b.status || b.statut || '').toLowerCase();
             } else if (histState.sortCol === 'agent') {
-                valA = (a.agentEmail || '').toLowerCase();
-                valB = (b.agentEmail || '').toLowerCase();
+                valA = (a.agentEmail || '').toLowerCase(); valB = (b.agentEmail || '').toLowerCase();
             } else {
-                // Cas génériques (code, client, cat...)
-                valA = (a[histState.sortCol] || '').toLowerCase();
-                valB = (b[histState.sortCol] || '').toLowerCase();
+                valA = (a[histState.sortCol] || '').toLowerCase(); valB = (b[histState.sortCol] || '').toLowerCase();
             }
 
             if (valA < valB) return histState.sortAsc ? -1 : 1;
@@ -1155,32 +1359,83 @@ window.resetCallDirection = function() {
             return 0;
         });
 
-        // 3. GENERATION HTML
-        const html = filtered.map(c => `
+        // --- 3. LOGIQUE PAGINATION ---
+        const totalItems = filtered.length;
+        const totalPages = Math.ceil(totalItems / histState.itemsPerPage) || 1;
+
+        // Sécurité : Si on est sur la page 5 mais qu'il n'y a plus que 2 pages après filtrage
+        if (histState.currentPage > totalPages) histState.currentPage = totalPages;
+        if (histState.currentPage < 1) histState.currentPage = 1;
+
+        // Découpage des données pour la page actuelle
+        const startIndex = (histState.currentPage - 1) * histState.itemsPerPage;
+        const endIndex = startIndex + histState.itemsPerPage;
+        const paginatedData = filtered.slice(startIndex, endIndex);
+
+        // --- 4. RENDU HTML (Lignes) ---
+        const html = paginatedData.map(c => `
             <tr class="border-b last:border-0 hover:bg-gray-50 transition group">
-                <td class="p-3 font-mono text-xs text-gray-500">${c.dateCall}</td>
-                <td class="p-3 font-bold text-gray-700 text-sm">${c.code}</td>
-                <td class="p-3"><div class="font-bold text-[#76787B] text-sm truncate w-32 md:w-auto">${c.client}</div></td>
-                <td class="p-3 text-xs hidden md:table-cell text-gray-500">${c.agentEmail || 'Inconnu'}</td>
-                <td class="p-3 text-sm hidden md:table-cell"><span class="px-2 py-1 rounded bg-orange-50 text-orange-700 text-xs">${c.cat}</span></td>
-                <td class="p-3">
-                    <span class="px-2 py-1 rounded-full text-xs font-bold ${(c.status || c.statut) === 'Clôturé' ? 'bg-green-100 text-green-700' : (c.status || c.statut) === 'À rappeler' ? 'bg-red-100 text-red-700' : (c.status || c.statut) === 'À traiter' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}">${c.status || c.statut}</span>
-                </td>
+                <td class="p-3 font-mono text-xs text-gray-500">${window.escapeHTML(c.dateCall)}</td>
+                <td class="p-3 font-bold text-gray-700 text-sm">${window.escapeHTML(c.code)}</td>
+                <td class="p-3"><div class="font-bold text-[#76787B] text-sm truncate w-32 md:w-auto">${window.escapeHTML(c.client)}</div></td>
+                <td class="p-3 text-sm text-gray-600 font-medium">${window.escapeHTML(c.app_concern || "-")}</td>
+                <td class="p-3 text-sm"><span class="px-2 py-1 rounded bg-orange-50 text-orange-700 text-xs">${window.escapeHTML(c.cat || c.category)}</span></td>
+                <td class="p-3 text-xs text-gray-500">${window.escapeHTML(c.agentEmail) || "Inconnu"}</td>
+                <td class="p-3">${window.getStatusBadge(c.status || c.statut)}</td>
                 <td class="p-3 w-1/3">
-                    <p class="text-xs text-gray-600 line-clamp-2 leading-relaxed max-w-md" title="${c.cr || ''}">${c.cr || '<span class="italic text-gray-300">Aucun commentaire</span>'}</p>
+                    <p class="text-xs text-gray-600 line-clamp-2 leading-relaxed max-w-md" title="${window.escapeHTML(c.cr) || ''}">${window.escapeHTML(c.cr) || '<span class="italic text-gray-300">Aucun commentaire</span>'}</p>
                 </td>
-                <td class="p-3 text-right"><button onclick="openDetail('${c.firestoreId}')" class="p-2 bg-gray-100 hover:bg-[#F58220] hover:text-white rounded-lg transition"><i class="ph ph-eye text-lg"></i></button></td>
+                
             </tr>
         `).join('');
 
-        tbody.innerHTML = html || '<tr><td colspan="8" class="p-8 text-center italic text-gray-400">Aucun résultat ne correspond à votre recherche.</td></tr>';
+        tbody.innerHTML = html || '<tr><td colspan="7" class="p-8 text-center italic text-gray-400">Aucun résultat ne correspond à votre recherche.</td></tr>';
         
-        // Mise à jour compteur
-        if(countSpan) countSpan.innerText = `${filtered.length} / ${window.getFilteredCalls().length}`;
+        // Mise à jour compteur global
+        if(countSpan) countSpan.innerText = `${totalItems} appels`;
         
-        // Mise à jour visuelle des flèches de tri
         updateSortIcons();
+
+        // --- 5. RENDU PAGINATION (Boutons) ---
+        renderPaginationControls(totalPages, totalItems);
     };
+
+    // Fonction pour générer les boutons de pagination
+    window.renderPaginationControls = function(totalPages, totalItems) {
+        const start = (histState.currentPage - 1) * histState.itemsPerPage + 1;
+        const end = Math.min(histState.currentPage * histState.itemsPerPage, totalItems);
+        
+        // Génération du HTML des boutons
+        const html = `
+            <div class="text-xs text-gray-500 font-medium flex items-center">
+                <span class="hidden md:inline mr-2">Affichage de <b>${totalItems > 0 ? start : 0}</b> à <b>${end}</b> sur <b>${totalItems}</b></span>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="changePage(-1)" ${histState.currentPage === 1 ? 'disabled' : ''} class="px-3 py-1.5 text-xs font-bold rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-gray-600 transition flex items-center gap-1">
+                    <i class="ph ph-caret-left"></i> Préc.
+                </button>
+                <div class="flex items-center px-2">
+                    <span class="text-xs font-bold text-gray-700">Page ${histState.currentPage} / ${totalPages}</span>
+                </div>
+                <button onclick="changePage(1)" ${histState.currentPage === totalPages ? 'disabled' : ''} class="px-3 py-1.5 text-xs font-bold rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-gray-600 transition flex items-center gap-1">
+                    Suiv. <i class="ph ph-caret-right"></i>
+                </button>
+            </div>
+        `;
+
+        // Injection en haut et en bas
+        const topEl = document.getElementById('pagination-controls-top');
+        const botEl = document.getElementById('pagination-controls-bottom');
+        
+        if(topEl) topEl.innerHTML = html;
+        if(botEl) botEl.innerHTML = html;
+    };
+
+    window.changePage = function(delta) {
+        histState.currentPage += delta;
+        refreshHistoryTable();
+    };
+
 
     // Actions UI
     window.setHistorySort = function(col) {
@@ -1194,12 +1449,12 @@ window.resetCallDirection = function() {
     };
 
     window.setHistoryFilter = function(val) {
-        histState.filterText = val;
+        histState.filterText = val; histState.currentPage = 1;
         refreshHistoryTable();
     };
 
     window.setHistoryStatusFilter = function(val) {
-        histState.filterStatus = val;
+        histState.filterStatus = val; histState.currentPage = 1;
         refreshHistoryTable();
     };
 
@@ -1216,10 +1471,152 @@ window.resetCallDirection = function() {
     
 
         
-        function renderHistory() {
-            // Le rendu initial lance la structure, puis appelle refreshHistoryTable() pour les données
-            setTimeout(() => refreshHistoryTable(), 50);
+        
+    function renderDocumentation() {
+        return `
+        <div id="view-documentation" class="fade-in max-w-5xl mx-auto pb-20 space-y-8">
+            
+            <div class="text-center mb-10">
+                <h2 class="text-3xl font-bold text-[#F58220] mb-2 flex items-center justify-center gap-3">
+                    <i class="ph ph-book-open"></i> Guide Utilisateur
+                </h2>
+                <p class="text-gray-500">Documentation fonctionnelle pour la prise en main de l'application.</p>
+            </div>
 
+            <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+                <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <span class="bg-blue-100 text-blue-600 w-8 h-8 rounded-full flex items-center justify-center text-sm">1</span>
+                    Navigation & Vue d'ensemble
+                </h3>
+                <p class="text-gray-600 mb-6">L'application est divisée en 4 sections principales accessibles via le menu latéral gauche :</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="flex items-start gap-3 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                        <div class="bg-white p-2 rounded-lg text-[#F58220] shadow-sm"><i class="ph ph-phone-plus text-xl"></i></div>
+                        <div>
+                            <span class="font-bold text-gray-700 block">Nouvel Appel</span>
+                            <span class="text-sm text-gray-500">L'écran principal pour enregistrer un appel (Entrant ou Sortant).</span>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                        <div class="bg-white p-2 rounded-lg text-[#F58220] shadow-sm"><i class="ph ph-chart-pie-slice text-xl"></i></div>
+                        <div>
+                            <span class="font-bold text-gray-700 block">Tableau de Bord</span>
+                            <span class="text-sm text-gray-500">Outil de pilotage affichant les statistiques et graphiques en temps réel.</span>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                        <div class="bg-white p-2 rounded-lg text-[#F58220] shadow-sm"><i class="ph ph-clock-counter-clockwise text-xl"></i></div>
+                        <div>
+                            <span class="font-bold text-gray-700 block">Historique</span>
+                            <span class="text-sm text-gray-500">La liste brute de tous les appels passés, avec recherche et filtres.</span>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                        <div class="bg-white p-2 rounded-lg text-[#F58220] shadow-sm"><i class="ph ph-list-checks text-xl"></i></div>
+                        <div>
+                            <span class="font-bold text-gray-700 block">Suivi des Actions</span>
+                            <span class="text-sm text-gray-500">Votre "To-Do List". Affiche uniquement les appels non résolus.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+                <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <span class="bg-orange-100 text-orange-600 w-8 h-8 rounded-full flex items-center justify-center text-sm">2</span>
+                    Comment saisir un appel ?
+                </h3>
+                <div class="space-y-6">
+                    <div class="flex gap-4">
+                        <div class="flex-none flex flex-col items-center">
+                            <div class="w-8 h-8 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center font-bold text-sm">A</div>
+                            <div class="h-full w-0.5 bg-gray-100 my-1"></div>
+                        </div>
+                        <div class="pb-4">
+                            <h4 class="font-bold text-gray-800">Identifier l'interlocuteur</h4>
+                            <p class="text-sm text-gray-600 mt-1">
+                                <span class="font-bold text-gray-700">Option 1 (Centre) :</span> Utilisez la barre de recherche. Tapez un Code (ex: 94002), une Ville ou un Nom. Cliquez sur la suggestion pour pré-remplir la fiche.<br>
+                                <span class="font-bold text-gray-700">Option 2 (Externe) :</span> Si ce n'est pas un centre (ex: Particulier, RR...), utilisez le menu déroulant "Contact Externe".
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex gap-4">
+                        <div class="flex-none flex flex-col items-center">
+                            <div class="w-8 h-8 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center font-bold text-sm">B</div>
+                            <div class="h-full w-0.5 bg-gray-100 my-1"></div>
+                        </div>
+                        <div class="pb-4">
+                            <h4 class="font-bold text-gray-800">Définir la Direction</h4>
+                            <p class="text-sm text-gray-600 mt-1">Cliquez obligatoirement sur <span class="text-orange-500 font-bold">Appel Entrant</span> (on vous appelle) ou <span class="text-orange-500 font-bold">Appel Sortant</span> (vous appelez).</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-4">
+                        <div class="flex-none flex flex-col items-center">
+                            <div class="w-8 h-8 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center font-bold text-sm">C</div>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-gray-800">Qualifier et Conclure</h4>
+                            <p class="text-sm text-gray-600 mt-1 mb-2">Choisissez l'Application concernée, la Catégorie précise, et surtout le <strong>Statut</strong> :</p>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                                <div class="px-3 py-2 bg-green-50 text-green-700 rounded-lg border border-green-100 flex items-center gap-2">
+                                    <i class="ph ph-check-circle text-lg"></i> <strong>Clôturé :</strong> Terminé, rien à faire.
+                                </div>
+                                <div class="px-3 py-2 bg-blue-50 text-blue-700 rounded-lg border border-blue-100 flex items-center gap-2">
+                                    <i class="ph ph-hourglass text-lg"></i> <strong>En cours :</strong> En attente (réponse client...).
+                                </div>
+                                <div class="px-3 py-2 bg-orange-50 text-orange-700 rounded-lg border border-orange-100 flex items-center gap-2">
+                                    <i class="ph ph-wrench text-lg"></i> <strong>À traiter :</strong> Action requise de notre part.
+                                </div>
+                                <div class="px-3 py-2 bg-yellow-50 text-yellow-700 rounded-lg border border-yellow-100 flex items-center gap-2">
+                                    <i class="ph ph-bell-ringing text-lg"></i> <strong>À rappeler :</strong> Rappel planifié.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+                <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <span class="bg-purple-100 text-purple-600 w-8 h-8 rounded-full flex items-center justify-center text-sm">3</span>
+                    Comprendre les Statistiques
+                </h3>
+                <p class="text-gray-600 mb-4 text-sm">Le Tableau de Bord permet d'analyser l'activité. Vous pouvez filtrer par <strong>Période</strong> (Jour, Semaine...) ou par <strong>Collaborateur</strong> via la barre supérieure.</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                        <h4 class="font-bold text-[#F58220] flex items-center gap-2 mb-2"><i class="ph ph-chart-donut"></i> Répartition (Sunburst)</h4>
+                        <p class="text-xs text-gray-500 leading-relaxed text-justify">
+                            Ce graphique à double niveau montre le volume d'appels.<br>
+                            - <strong>Cercle Intérieur :</strong> Les grands domaines (Applications).<br>
+                            - <strong>Cercle Extérieur :</strong> Les détails (Catégories).<br>
+                            Survolez une zone pour voir le nombre exact d'appels.
+                        </p>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-[#F58220] flex items-center gap-2 mb-2"><i class="ph ph-grid-four"></i> Matrice d'Incidents</h4>
+                        <p class="text-xs text-gray-500 leading-relaxed text-justify">
+                            Ce tableau croisé (Heatmap) permet d'identifier les "sujets chauds".<br>
+                            Plus une case est <strong>foncée</strong>, plus il y a eu d'appels sur ce croisement (Application x Problème). Idéal pour détecter une panne générale.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-gradient-to-r from-orange-50 to-white p-6 rounded-2xl border border-orange-100">
+                <h3 class="font-bold text-orange-800 flex items-center gap-2 mb-2"><i class="ph ph-lightbulb"></i> Le saviez-vous ?</h3>
+                <ul class="list-disc ml-5 text-sm text-gray-600 space-y-1">
+                    <li>Vous pouvez <strong>exporter</strong> vos données en CSV depuis l'onglet Historique.</li>
+                    <li>Cliquez sur un appel dans l'Historique pour <strong>modifier son statut</strong> ou ajouter une note ultérieurement.</li>
+                    <li>Le "Suivi des Actions" affiche un badge rouge dans le menu s'il y a des dossiers en attente.</li>
+                </ul>
+            </div>
+        </div>
+        `;
+    }
+
+        function renderHistory() {
+            setTimeout(() => refreshHistoryTable(), 50);
             return `
                 <div class="fade-in">
                     ${window.renderFilterBar()}
@@ -1238,73 +1635,52 @@ window.resetCallDirection = function() {
                         </div>
                     </div>
 
-                    <div class="bg-white p-4 rounded-t-xl border-b border-gray-100 flex flex-col md:flex-row gap-4 items-center shadow-sm">
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6">
+                        <div class="flex flex-col md:flex-row gap-4 items-center mb-4">
+                            <div class="relative flex-1 w-full">
+                                <input type="text" oninput="setHistoryFilter(this.value)" class="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:border-[#F58220] outline-none text-sm transition-colors" placeholder="Rechercher...">
+                            </div>
+                            <div class="w-full md:w-48 relative">
+                                <select onchange="setHistoryStatusFilter(this.value)" class="w-full pl-3 pr-8 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:border-[#F58220] outline-none text-sm appearance-none cursor-pointer">
+                                    <option value="">Tous les statuts</option>
+                                    <option value="En cours">En cours</option>
+                                    <option value="À traiter">À traiter</option>
+                                    <option value="À rappeler">À rappeler</option>
+                                    <option value="Clôturé">Clôturé</option>
+                                </select>
+                                <i class="ph ph-caret-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+                            </div>
+                        </div>
                         
-                        <div class="relative flex-1 w-full">
-                            
-                            <input type="text" 
-                                oninput="setHistoryFilter(this.value)" 
-                                class="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:border-[#F58220] outline-none text-sm transition-colors"
-                                placeholder="Rechercher par Code, Client ou Collaborateur...">
-                        </div>
+                        <div id="pagination-controls-top" class="flex justify-end mb-2"></div>
 
-                        <div class="w-full md:w-48 relative">
-                            <i class="ph ph-funnel absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                            <select onchange="setHistoryStatusFilter(this.value)" class="w-full pl-10 pr-8 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:border-[#F58220] outline-none text-sm appearance-none cursor-pointer">
-                                <option value="">Tous les statuts</option>
-                                <option value="Clôturé">Clôturé</option>
-                                <option value="En cours">En cours</option>
-                                <option value="À traiter">À traiter</option>
-                                <option value="À rappeler">À rappeler</option>
-                                <option value="NRP">NRP</option>
-                                <option value="Refus">Refus</option>
-                                <option value="Validé">Validé</option>
-                            </select>
-                            <i class="ph ph-caret-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+                        <div class="rounded-xl border border-gray-200 overflow-hidden">
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left whitespace-nowrap">
+                                    <thead class="bg-gray-50 text-xs font-bold text-gray-500 uppercase border-b">
+                                        <tr>
+                                            <th onclick="setHistorySort('timestamp')" class="p-3 cursor-pointer hover:bg-gray-100 transition select-none">Date <i id="sort-timestamp" class="ph ph-arrows-down-up ml-1"></i></th>
+                                            <th onclick="setHistorySort('code')" class="p-3 cursor-pointer hover:bg-gray-100 transition select-none">Code <i id="sort-code" class="ph ph-arrows-down-up ml-1"></i></th>
+                                            <th onclick="setHistorySort('client')" class="p-3 cursor-pointer hover:bg-gray-100 transition select-none">Client <i id="sort-client" class="ph ph-arrows-down-up ml-1"></i></th>
+                                            <th onclick="setHistorySort(\'app_concern\')" class="p-3 cursor-pointer hover:bg-gray-100 transition select-none">Application <i id="sort-app" class="ph ph-arrows-down-up ml-1"></i></th>
+                                            <th onclick="setHistorySort(\'cat\')" class="p-3 cursor-pointer hover:bg-gray-100 transition select-none">Catégorie <i id="sort-cat" class="ph ph-arrows-down-up ml-1"></i></th>
+                                            <th onclick="setHistorySort(\'agent\')" class="p-3 cursor-pointer hover:bg-gray-100 transition select-none">Collaborateur <i id="sort-agent" class="ph ph-arrows-down-up ml-1"></i></th>
+                                            <th onclick="setHistorySort('statut')" class="p-3 cursor-pointer hover:bg-gray-100 transition select-none">Statut <i id="sort-statut" class="ph ph-arrows-down-up ml-1"></i></th>
+                                            <th class="p-3 w-1/3">Note</th>
+                                            
+                                        </tr>
+                                    </thead>
+                                    <tbody id="history-table-body"><tr><td colspan="7" class="p-8 text-center text-gray-400">Chargement...</td></tr></tbody>
+                                </table>
+                            </div>
                         </div>
-                    </div>
-
-                    <div class="bg-white rounded-b-xl shadow-sm border border-t-0 overflow-hidden">
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left whitespace-nowrap">
-                                <thead class="bg-gray-50 text-xs font-bold text-gray-500 uppercase border-b">
-                                    <tr>
-                                        <th onclick="setHistorySort('timestamp')" class="p-3 cursor-pointer hover:bg-gray-100 transition select-none">
-                                            Date <i id="sort-timestamp" class="ph ph-arrows-down-up sort-icon text-gray-300 ml-1"></i>
-                                        </th>
-                                        <th onclick="setHistorySort('code')" class="p-3 cursor-pointer hover:bg-gray-100 transition select-none">
-                                            Code <i id="sort-code" class="ph ph-arrows-down-up sort-icon text-gray-300 ml-1"></i>
-                                        </th>
-                                        <th onclick="setHistorySort('client')" class="p-3 cursor-pointer hover:bg-gray-100 transition select-none">
-                                            Client <i id="sort-client" class="ph ph-arrows-down-up sort-icon text-gray-300 ml-1"></i>
-                                        </th>
-                                        <th onclick="setHistorySort('agent')" class="p-3 hidden md:table-cell cursor-pointer hover:bg-gray-100 transition select-none">
-                                            Collaborateur SGS <i id="sort-agent" class="ph ph-arrows-down-up sort-icon text-gray-300 ml-1"></i>
-                                        </th>
-                                        <th onclick="setHistorySort('cat')" class="p-3 hidden md:table-cell cursor-pointer hover:bg-gray-100 transition select-none">
-                                            Catégorie <i id="sort-cat" class="ph ph-arrows-down-up sort-icon text-gray-300 ml-1"></i>
-                                        </th>
-                                        <th onclick="setHistorySort('statut')" class="p-3 cursor-pointer hover:bg-gray-100 transition select-none">
-                                            Statut <i id="sort-statut" class="ph ph-arrows-down-up sort-icon text-gray-300 ml-1"></i>
-                                        </th>
-                                        <th class="p-3 w-1/3">Compte Rendu</th>
-                                        <th class="p-3 text-right">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="history-table-body">
-                                    <tr><td colspan="8" class="p-8 text-center text-gray-400"><i class="ph ph-spinner animate-spin text-2xl"></i> Chargement...</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
+                        
+                        <div id="pagination-controls-bottom" class="flex justify-between items-center mt-4 pt-2 border-t border-gray-100"></div>
                     </div>
                 </div>`;
         }
-    
 
-        
-        let currentEditingId = null; // Stocke l'ID du document ouvert
-
-        function openDetail(firestoreId) {
+    function openDetail(firestoreId) {
             currentEditingId = firestoreId;
             const call = calls.find(c => c.firestoreId === firestoreId);
             if(!call) return;
@@ -1314,7 +1690,7 @@ window.resetCallDirection = function() {
             document.getElementById('modal-code').innerText = call.code || '-';
             document.getElementById('modal-date').innerText = call.dateCall || '-';
             document.getElementById('modal-agent').innerText = `Traité par : ${call.agentEmail || 'Inconnu'}`;
-            document.getElementById('modal-cat').innerText = call.cat || '-';
+            document.getElementById('modal-cat').innerText = call.cat || call.category || '-';
             document.getElementById('modal-sub').innerText = call.sub || '-';
             document.getElementById('modal-cr').innerText = call.cr || "Aucune note.";
             
@@ -1531,10 +1907,12 @@ window.updateCategoryOptions = function() {
         </div>
     </div>
     
-    <aside class="w-64 bg-white border-r border-gray-200 flex flex-col z-10 shadow-sm">
-        <div class="p-6 flex justify-center border-b border-gray-100">
-            <div class="w-60 h-60 rounded-xl overflow-hidden flex items-center justify-center bg-white p-2 transition-transform hover:scale-105">
-                <img src="Logo.png" alt="Logo" class="w-full h-full object-contain">
+    <aside class="w-64 shrink-0 bg-white border-r border-gray-200 flex flex-col z-10 shadow-sm">
+        <div class="p-4 flex justify-center border-b border-gray-100">
+            <div class="w-48 h-auto rounded-xl overflow-hidden flex items-center justify-center bg-white transition-transform hover:scale-105">
+                <img src="Logo.png" alt="Logo" class="w-full h-auto object-contain">
+            </div>
+        </div>
             </div>
         </div>
         
@@ -1553,14 +1931,15 @@ window.updateCategoryOptions = function() {
                 <i class="ph ph-list-checks text-lg"></i> Suivi des Actions
                 <span id="badge-todo" class="hidden ml-auto bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">!</span>
             </button>
+            <button onclick="navigate('documentation')" id="btn-documentation" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl hover:bg-gray-50 text-[#9fa0a2] transition-colors">
+                <i class="ph ph-book-open text-lg"></i> Documentation
+            </button>
 
         </nav>
         
             
             <div class="p-4 border-t border-gray-100 mt-2">
-            <div id="sidebar-user-display" class="mb-3 px-2 text-xs font-bold text-gray-500 text-center truncate bg-gray-50 py-2 rounded-lg border border-gray-100">
-                <i class="ph ph-user-circle text-lg align-middle mr-1"></i> <span id="user-email-span">...</span>
-            </div>
+            
             <button id="logout-btn"  class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl hover:bg-red-50 text-red-500 transition-colors border border-transparent hover:border-red-100">
                 <i class="ph ph-sign-out text-lg"></i> Déconnexion
             </button>
@@ -1576,7 +1955,7 @@ window.updateCategoryOptions = function() {
 
     <div id="mobile-sidebar" class="fixed inset-0 z-30 hidden">
         <div class="absolute inset-0 bg-black/50" onclick="toggleMobileMenu()"></div>
-        <aside class="absolute left-0 top-0 bottom-0 w-64 bg-white shadow-xl flex flex-col">
+        <aside class="absolute left-0 top-0 bottom-0 w-64 shrink-0 bg-white shadow-xl flex flex-col">
             <div class="p-6 flex justify-between items-center border-b border-gray-100">
                 <span class="font-bold text-lg text-[#F58220]">Menu</span>
                 <button onclick="toggleMobileMenu()"><i class="ph ph-x text-xl"></i></button>
@@ -1586,6 +1965,7 @@ window.updateCategoryOptions = function() {
                 <button onclick="navigate('dashboard');toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-gray-600 hover:bg-gray-50"><i class="ph ph-chart-pie-slice text-lg"></i> Tableau de Bord</button>
                 <button onclick="navigate('history');toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-gray-600 hover:bg-gray-50"><i class="ph ph-clock-counter-clockwise text-lg"></i> Historique</button>
                 <button onclick="navigate('followup');toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-gray-600 hover:bg-gray-50"><i class="ph ph-list-checks text-lg"></i> Suivi des Actions</button>
+                <button onclick="navigate('documentation');toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-gray-600 hover:bg-gray-50"><i class="ph ph-book-open text-lg"></i> Documentation</button>
                 
                 <button id="mobile-logout-btn"  class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-red-500 hover:bg-red-50 mt-4"><i class="ph ph-sign-out text-lg"></i> Déconnexion</button>
             </nav>
@@ -1819,11 +2199,81 @@ window.getDoc = getDoc;
             });
         }
 
-        // Gestion de l'état de connexion (MODIFIÉ)
+        
+    // --- SYSTÈME DE PRÉSENCE TEMPS RÉEL (MULTI-UTILISATEURS) ---
+    window.presenceInterval = null;
+
+    async function startPresenceSystem(user) {
+        const userStatusRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'presence', user.uid);
+        const presenceCollection = window.collection(window.db, 'artifacts', window.appId, 'public', 'data', 'presence');
+
+        // 1. Fonction pour dire "Je suis là" (Heartbeat)
+        const sendHeartbeat = async () => {
+            try {
+                await window.setDoc(userStatusRef, {
+                    email: user.email,
+                    displayName: user.displayName || user.email.split('@')[0],
+                    last_seen: Date.now(),
+                    state: 'online'
+                }, { merge: true });
+            } catch (e) { console.error("Err heartbeat:", e); }
+        };
+
+        // Envoyer immédiatement puis toutes les 60 secondes
+        sendHeartbeat();
+        if (window.presenceInterval) clearInterval(window.presenceInterval);
+        window.presenceInterval = setInterval(sendHeartbeat, 60000);
+
+        // 2. Écouter les autres (Mise à jour de la liste)
+        window.onSnapshot(presenceCollection, (snapshot) => {
+            const usersList = document.getElementById('connected-users-list');
+            if (!usersList) return;
+
+            usersList.innerHTML = ''; // Reset
+            const now = Date.now();
+            let activeCount = 0;
+
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                // On considère "En ligne" si vu il y a moins de 2 minutes
+                const isOnline = (now - data.last_seen) < (2 * 60 * 1000);
+
+                if (isOnline) {
+                    activeCount++;
+                    const isMe = (doc.id === user.uid);
+                    const name = data.email.split('@')[0].replace('.', ' '); // Format "prenom nom"
+                    
+                    const div = document.createElement('div');
+                    div.className = 'flex items-center gap-2 text-xs font-medium text-gray-700 animate-fade-in';
+                    div.innerHTML = `
+                        <div class="relative">
+                            <div class="w-2 h-2 rounded-full ${isMe ? 'bg-green-500' : 'bg-blue-500'}"></div>
+                            ${isMe ? '<div class="absolute inset-0 rounded-full bg-green-500 animate-ping opacity-50"></div>' : ''}
+                        </div>
+                        <span class="truncate capitalize" title="${data.email}">
+                            ${isMe ? 'Moi' : name}
+                        </span>
+                    `;
+                    usersList.appendChild(div);
+                }
+            });
+
+            if (activeCount === 0) {
+                usersList.innerHTML = '<span class="text-xs text-gray-400 italic">Personne en ligne</span>';
+            }
+        });
+    }
+
+    // Gestion de l'état de connexion (MODIFIÉ)
         onAuthStateChanged(auth, (user) => {
             if (user) { 
                 window.currentUser = user;
                 const userSpan = document.getElementById('user-email-span');
+                
+                // --- SYSTÈME DE PRÉSENCE ---
+                // startPresenceSystem(user); // Désactivé
+    
+
                 if(userSpan) userSpan.innerText = user.email;
                 
                 // --- NOUVEAU : Lance le processus de chargement ---
@@ -1910,6 +2360,7 @@ window.getDoc = getDoc;
                     else { badge.classList.add('hidden'); }
                 }
 
+                if(window.populateCollabList) window.populateCollabList();
                 if(currentView !== 'entry') navigate(currentView);
             
                 
@@ -1993,8 +2444,8 @@ const obj = Object.fromEntries(fd.entries());
 
                 try {
                     await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'calls'), obj);
-                    alert("Appel enregistré et partagé !");
-                    navigate('history');
+                    // alert("Appel enregistré !"); // Popup retiré
+                    navigate('entry');
                 } catch (error) {
                     console.error("Erreur ajout:", error);
                     alert("Erreur lors de la sauvegarde: " + error.message);
@@ -2078,14 +2529,14 @@ const obj = Object.fromEntries(fd.entries());
         // Liste des résultats
         let html = results.slice(0, 10).map(c => { // Limite à 10 résultats
             return `
-                <div onclick="toggleSingleSelection('${c.code.replace(/[']/g, "\\'")}', event)" 
+                <div onclick="toggleSingleSelection('${window.escapeHTML(c.code).replace(/[']/g, "\\'")}', event)" 
                     class="p-3 border-b border-gray-50 hover:bg-orange-50 cursor-pointer transition flex items-center gap-3 text-left">
                     <div class="flex-1">
                         <div class="flex justify-between items-center">
-                            <span class="font-bold text-gray-700">${c.code}</span>
+                            <span class="font-bold text-gray-700">${window.escapeHTML(c.code)}</span>
                             <span class="text-xs text-gray-400 pl-1">${c.dirigeant ? '<i class="ph ph-user"></i> ' + c.dirigeant : ''}</span>
                         </div>
-                        <div class="text-sm text-gray-600 truncate">${c.nom || 'Sans nom'} - ${c.ville || 'Ville inconnue'}</div>
+                        <div class="text-sm text-gray-600 truncate">${window.escapeHTML(c.nom) || 'Sans nom'} - ${window.escapeHTML(c.ville) || 'Ville inconnue'}</div>
                     </div>
                 </div>
             `;
