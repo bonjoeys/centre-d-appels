@@ -302,13 +302,7 @@
                 </div>
                 
                 <div class="flex flex-col md:flex-row gap-2 w-full xl:w-auto">
-                    <div class="relative min-w-[200px]">
-                        <i class="ph ph-user absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                        <select id="filter-collab" onchange="window.setCollabFilter(this.value)" class="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg outline-none text-sm font-medium text-gray-600 cursor-pointer hover:bg-gray-100 transition">
-                            <option value="">Chargement...</option>
-                        </select>
-                        <i class="ph ph-caret-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
-                    </div>
+                     <div class="relative w-full xl:w-72" id="custom-collab-wrapper">  <select id="filter-collab" onchange="window.handleNativeChange(this.value)" class="hidden"></select>  <button onclick="window.toggleCollabDropdown(event)" class="w-full pl-3 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl shadow-sm text-sm font-medium text-gray-700 hover:border-orange-300 hover:shadow-md transition-all flex items-center justify-between group">   <div class="flex items-center gap-3 overflow-hidden">    <div id="collab-avatar" class="w-8 h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-xs font-bold shrink-0 border border-orange-200"><i class="ph ph-users"></i></div>    <div class="flex flex-col items-start truncate">     <span class="text-[10px] text-gray-400 uppercase font-bold tracking-wider leading-none mb-0.5">Collaborateur</span>     <span id="collab-display" class="truncate font-bold text-gray-800">Tous</span>    </div>   </div>   <i class="ph ph-caret-down text-gray-400 group-hover:text-orange-500 transition-colors"></i>  </button>  <div id="collab-dropdown" class="hidden absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden animate-fade-in origin-top">   <div class="p-2 border-b border-gray-100 bg-gray-50">    <div class="relative">     <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>     <input type="text" oninput="window.filterCustomList(this.value)" id="collab-search-input" class="w-full pl-9 pr-3 py-2 text-sm bg-white border border-gray-200 rounded-lg outline-none focus:border-orange-500 transition-colors placeholder-gray-400" placeholder="Chercher...">    </div>   </div>   <div id="collab-list-container" class="max-h-60 overflow-y-auto divide-y divide-gray-50 scrollbar-thin"></div>  </div> </div> 
 
                     <div class="flex gap-2 items-center bg-gray-50 p-1.5 rounded-lg border border-gray-100">
                         <i class="ph ph-calendar text-gray-400"></i>
@@ -1255,7 +1249,7 @@ window.resetCallDirection = function() {
 
             // Tri : Les plus anciens d'abord ? Ou les plus récents ?
             const rows = todoCalls.sort((a,b) => (a.dateCall < b.dateCall ? 1 : -1)).map(c => `
-                <tr class="border-b last:border-0 hover:bg-orange-50/40 transition group">
+                <tr class="border-b last:border-0 hover:bg-orange-50/40 transition group cursor-pointer" ondblclick="window.openDetail(\'${c.firestoreId}\')" title="Double-clic pour gérer">
                     <td class="p-3 font-mono text-xs text-gray-500">${window.escapeHTML(c.dateCall)}</td>
                     <td class="p-3 font-bold text-gray-700 text-sm">${window.escapeHTML(c.code)}</td>
                     <td class="p-3"><div class="font-bold text-[#76787B] text-sm truncate w-32 md:w-auto">${window.escapeHTML(c.client)}</div></td>
@@ -1982,13 +1976,10 @@ window.updateCategoryOptions = function() {
 <div class="w-48 h-auto rounded-xl overflow-hidden flex items-center justify-center bg-white transition-transform hover:scale-105" id="logo-wrapper">
 <img alt="Logo" class="w-full h-auto object-contain" src="Logo.png"/>
 </div>
-
 <button class="absolute right-2 top-4 bg-gray-50 hover:bg-orange-100 text-gray-400 hover:text-[#F58220] border border-gray-200 rounded-lg p-1.5 transition-colors z-50" id="sidebar-toggle-btn" onclick="toggleCompactSidebar()">
 <i class="ph ph-caret-left font-bold text-lg"></i>
 </button>
 </div>
-
-
 <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
 <button class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl hover:bg-gray-50 text-[#9fa0a2] transition-colors group relative" id="btn-entry" onclick="navigate('entry')">
 <i class="ph ph-phone-plus text-lg"></i><span class="menu-text whitespace-nowrap ml-3 transition-all duration-200"> Nouvel Appel
@@ -2061,9 +2052,25 @@ window.updateCategoryOptions = function() {
 <p class="text-xs text-gray-500 italic mt-1" id="modal-agent">-</p>
 </div>
 </div>
-<div class="grid grid-cols-2 gap-4">
-<div><p class="text-xs font-bold text-gray-400 uppercase">Catégorie</p><p class="font-medium text-gray-700" id="modal-cat">-</p></div>
-<div><p class="text-xs font-bold text-gray-400 uppercase">Sous-catégorie</p><p class="font-medium text-gray-700" id="modal-sub">-</p></div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-orange-50/50 p-3 rounded-xl border border-orange-100">
+<div>
+<label class="text-xs font-bold text-orange-500 uppercase block mb-1">Application Concernée</label>
+<div class="relative">
+<select class="w-full p-2 bg-white border border-orange-200 rounded-lg text-sm font-bold text-gray-700 outline-none focus:border-orange-500" id="modal-edit-app" onchange="window.updateModalCategories(this.value)">
+<option value="">-- Sélectionner --</option>
+</select>
+<i class="ph ph-caret-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+</div>
+</div>
+<div>
+<label class="text-xs font-bold text-orange-500 uppercase block mb-1">Catégorie</label>
+<div class="relative">
+<select class="w-full p-2 bg-white border border-orange-200 rounded-lg text-sm font-bold text-gray-700 outline-none focus:border-orange-500" id="modal-edit-cat">
+<option value="">-- D'abord l'app --</option>
+</select>
+<i class="ph ph-caret-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+</div>
+</div>
 </div>
 <div class="bg-gray-50 rounded-xl p-4 border border-gray-200">
 <p class="text-xs font-bold text-[#F58220] uppercase mb-2 flex items-center gap-1"><i class="ph ph-note-pencil"></i> Historique du Compte Rendu</p>
@@ -2095,7 +2102,9 @@ window.updateCategoryOptions = function() {
 </div>
 </div>
 <div class="p-4 bg-gray-50 border-t border-gray-100 flex justify-between items-center shrink-0">
-<button class="text-gray-500 hover:text-gray-700 font-medium text-sm" onclick="closeDetail()">Annuler</button>
+<button class="mr-auto text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-2 rounded-lg transition flex items-center gap-2 text-sm font-bold" onclick="window.confirmDelete()" title="Supprimer cet appel">
+<i class="ph ph-trash text-lg"></i> <span class="hidden md:inline">Supprimer</span>
+</button>
 <button class="px-6 py-2 bg-[#F58220] text-white font-bold rounded-lg hover:bg-[#d9731c] transition flex items-center gap-2 shadow-md shadow-orange-100" onclick="saveCallUpdate()">
 <i class="ph ph-floppy-disk"></i> Sauvegarder
                 </button>
@@ -2108,7 +2117,8 @@ window.updateCategoryOptions = function() {
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
     import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, setPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, collection, addDoc, setDoc, getDoc, getDocs, updateDoc, doc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    window.deleteDoc = deleteDoc;
     
     
     // --- Correction ReferenceError ---
@@ -2818,7 +2828,7 @@ const obj = Object.fromEntries(fd.entries());
         }, 310);
     };
     </script>
-    <script>
+<script>
     // --- FONCTIONS AJOUTÉES POUR MODALES ---
     let currentEditingId = null;
 
@@ -2877,6 +2887,392 @@ const obj = Object.fromEntries(fd.entries());
         }
     };
     </script>
+<div class="fixed inset-0 z-[200] hidden bg-black/80 backdrop-blur-sm flex items-center justify-center fade-in" id="deleteSecurityModal">
+<div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md border border-red-100 relative overflow-hidden">
+<div class="absolute top-0 left-0 w-full h-1 bg-red-500"></div>
+<div class="text-center">
+<div class="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+<i class="ph ph-warning text-3xl text-red-500"></i>
+</div>
+<h3 class="text-xl font-bold text-gray-800 mb-2">Suppression définitive</h3>
+<p class="text-sm text-gray-500 mb-6">
+                    Vous êtes sur le point de supprimer l'appel pour le code <span class="font-bold text-red-600 font-mono" id="del-target-code"></span>.<br/>
+                    Cette action est irréversible.
+                </p>
+<div class="bg-gray-50 p-4 rounded-lg mb-6 text-left">
+<label class="block text-xs font-bold text-gray-400 uppercase mb-2">Sécurité : Recopiez le Code ci-dessus</label>
+<input class="w-full p-3 border border-gray-300 rounded-lg focus:border-red-500 outline-none font-mono font-bold text-center uppercase" id="del-verification-input" placeholder="CODE" type="text"/>
+</div>
+<div class="flex gap-3">
+<button class="flex-1 py-3 rounded-lg border border-gray-200 font-bold text-gray-600 hover:bg-gray-50 transition" onclick="window.closeDeleteModal()">Annuler</button>
+<button class="flex-1 py-3 rounded-lg bg-red-500 text-white font-bold hover:bg-red-600 shadow-lg shadow-red-100 transition" onclick="window.triggerFinalDelete()">Confirmer la suppression</button>
+</div>
+</div>
+</div>
+</div>
+<script>
+    // --- PATCH CORRECTIF : ÉDITION & SUPPRESSION ---
+
+    // 1. Fonction pour mettre à jour les catégories dans la modale
+    window.updateModalCategories = function(appName, selectedCat) {
+        const catSelect = document.getElementById('modal-edit-cat');
+        if(!catSelect) return;
+        
+        catSelect.innerHTML = '<option value="">-- Choisir Catégorie --</option>';
+        
+        if(appName && window.appSettings && window.appSettings[appName]) {
+            const cats = window.appSettings[appName];
+            cats.sort().forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c;
+                opt.innerText = c;
+                catSelect.appendChild(opt);
+            });
+        }
+        
+        if(selectedCat) {
+            catSelect.value = selectedCat;
+        }
+    };
+
+    // 2. Redéfinition de openDetail pour peupler les menus déroulants
+    window.openDetail = function(firestoreId) {
+        window.currentEditingId = firestoreId;
+        const call = window.calls.find(c => c.firestoreId === firestoreId);
+        if(!call) return;
+        
+        // Champs lecture seule
+        document.getElementById('modal-client').innerText = call.client || '-';
+        document.getElementById('modal-code').innerText = call.code || '-';
+        document.getElementById('modal-date').innerText = call.dateCall || '-';
+        document.getElementById('modal-agent').innerText = 'Traité par : ' + (call.agentEmail || 'Inconnu');
+        document.getElementById('modal-cr').innerText = call.cr || "Aucune note.";
+        
+        // Reset note
+        document.getElementById('edit-note').value = "";
+        
+        // STATUS : Cocher le bon radio
+        const currentStatus = call.status || call.statut || 'En cours';
+        const radios = document.getElementsByName('edit-status');
+        radios.forEach(r => {
+            r.checked = (r.value === currentStatus);
+        });
+
+        // --- NOUVEAU : GESTION APPLICATION & CATÉGORIE ---
+        const appSelect = document.getElementById('modal-edit-app');
+        
+        // Remplir la liste des Apps
+        appSelect.innerHTML = '<option value="">-- App --</option>';
+        if(window.appSettings) {
+            Object.keys(window.appSettings).sort().forEach(app => {
+                const opt = document.createElement('option');
+                opt.value = app;
+                opt.innerText = app;
+                appSelect.appendChild(opt);
+            });
+        }
+
+        // Sélectionner l'App actuelle
+        const currentApp = call.app_concern || ''; 
+        appSelect.value = currentApp;
+
+        // Déclencher le chargement des catégories correspondant à l'App
+        const currentCat = call.cat || call.category || '';
+        window.updateModalCategories(currentApp, currentCat);
+        
+        // Affichage Modale
+        const modal = document.getElementById('detailModal');
+        modal.classList.remove('hidden');
+        setTimeout(() => modal.querySelector('div').classList.remove('scale-95', 'opacity-0'), 10);
+    };
+
+    // 3. Redéfinition de saveCallUpdate pour inclure App et Catégorie
+    window.saveCallUpdate = async function() {
+        if(!window.currentEditingId) return;
+        
+        // Statut
+        const radios = document.getElementsByName('edit-status');
+        let newStatus = null;
+        radios.forEach(r => { if(r.checked) newStatus = r.value; });
+        if(!newStatus) { alert("Veuillez sélectionner un statut."); return; }
+
+        // Récupération des nouveaux champs
+        const newApp = document.getElementById('modal-edit-app').value;
+        const newCat = document.getElementById('modal-edit-cat').value;
+        const newNote = document.getElementById('edit-note').value.trim();
+        
+        const btn = document.querySelector('#detailModal button[onclick="saveCallUpdate()"]');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i>';
+        btn.disabled = true;
+
+        try {
+            const callRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'calls', window.currentEditingId);
+            
+            const updateData = { 
+                status: newStatus,
+                app_concern: newApp,
+                cat: newCat
+            }; 
+            
+            if(newNote) {
+                const oldCR = document.getElementById('modal-cr').innerText;
+                const timestamp = new Date().toLocaleString('fr-FR');
+                const separator = oldCR.includes("Aucune note") ? "" : "\n\n";
+                updateData.cr = `${oldCR.replace("Aucune note.", "")}${separator}[${timestamp}] ${newNote}`;
+            }
+
+            await window.updateDoc(callRef, updateData);
+            window.closeDetail();
+            
+        } catch (e) {
+            console.error("Erreur update:", e);
+            alert("Erreur lors de la sauvegarde : " + e.message);
+        } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    };
+
+    // 4. Fonction de suppression réelle (Firestore)
+    window.finalizeDeleteFirestore = async function(id) {
+        try {
+            const callRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'calls', id);
+            await window.deleteDoc(callRef);
+            
+            window.closeDeleteModal();
+            window.closeDetail();
+            
+            // Notification visuelle optionnelle
+            // alert("Appel supprimé avec succès.");
+        } catch (e) {
+            console.error("Erreur suppression:", e);
+            alert("Impossible de supprimer : " + e.message);
+        }
+    };
+    </script>
+<script>
+    // --- FIX : GESTION ROBUSTE DE LA SUPPRESSION ---
+    window.confirmDelete = function() {
+        console.log("Tentative de suppression...");
+        
+        // 1. Vérification de l'ID
+        if(!window.currentEditingId) {
+            alert("Erreur : Aucun dossier sélectionné.");
+            return;
+        }
+
+        // 2. Récupération des données
+        // On utilise window.calls pour être sûr de taper dans la globale
+        const call = (window.calls || []).find(c => c.firestoreId === window.currentEditingId);
+        
+        if (!call) {
+            console.error("Appel non trouvé dans la liste locale.");
+            alert("Erreur : Impossible de retrouver les données de cet appel.");
+            return;
+        }
+
+        // 3. Remplissage de la modale de sécurité
+        const codeSpan = document.getElementById('del-target-code');
+        const inputVerif = document.getElementById('del-verification-input');
+        const modal = document.getElementById('deleteSecurityModal');
+
+        if(codeSpan) codeSpan.innerText = call.code || 'INCONNU';
+        if(inputVerif) inputVerif.value = "";
+        
+        // 4. Affichage forcé
+        if(modal) {
+            modal.classList.remove('hidden');
+            // Animation CSS si présente
+            modal.classList.add('flex'); // S'assure que le flex est actif
+        } else {
+            alert("Erreur critique : La modale de confirmation est introuvable dans le HTML.");
+        }
+    };
+    </script>
+<script>
+    // --- FIX SECURITE : COMPARAI ROBUSTE & INSENSIBLE A LA CASSE ---
+    window.triggerFinalDelete = function() {
+        // 1. Récupérer l'input utilisateur
+        const inputEl = document.getElementById('del-verification-input');
+        if (!inputEl) { alert("Erreur interne : Champ de saisie introuvable."); return; }
+        
+        // 2. Nettoyer la saisie (retirer espaces + forcer majuscules)
+        const userValue = inputEl.value.trim().toUpperCase();
+        
+        // 3. Récupérer l'appel ciblé
+        if (!window.currentEditingId) { alert("Aucun appel sélectionné."); return; }
+        const call = (window.calls || []).find(c => c.firestoreId === window.currentEditingId);
+        
+        if (!call) { alert("Erreur : Impossible de retrouver les données de l'appel."); return; }
+
+        // 4. Nettoyer le code cible (sécurité si le code en base a des espaces)
+        const targetCode = (call.code || '').toString().trim().toUpperCase();
+
+        // LOG POUR DEBUG (Ouvrir la console F12 si besoin)
+        console.log("Tentative suppression - Saisi:", userValue, "| Attendu:", targetCode);
+
+        // 5. COMPARAISON STRICTE
+        if (userValue !== targetCode) {
+            alert("Code de sécurité incorrect !\n\nVous avez saisi : " + userValue + "\nAttendu : " + targetCode);
+            // On vide le champ pour retenter
+            inputEl.value = "";
+            inputEl.focus();
+            return;
+        }
+
+        // 6. Exécution
+        const btn = document.querySelector('#deleteSecurityModal button[onclick="window.triggerFinalDelete()"]');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Suppression...';
+        btn.disabled = true;
+
+        if (window.finalizeDeleteFirestore) {
+            window.finalizeDeleteFirestore(window.currentEditingId)
+                .then(() => {
+                    // Succès géré par la fonction appelée
+                })
+                .catch(err => {
+                    alert("Erreur technique : " + err.message);
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                });
+        } else {
+            alert("Erreur critique : Le module de suppression Firebase n'est pas chargé.");
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    };
+    </script>
+<script>
+    // --- UI LOGIC: CUSTOM DROPDOWN ---
+    window.originalPopulateCollabList = window.populateCollabList;
+    window.populateCollabList = function() {
+        const select = document.getElementById('filter-collab');
+        const container = document.getElementById('collab-list-container');
+        if(!select || !container) return;
+
+        const agents = new Set();
+        (window.calls || []).forEach(c => { if(c.agentEmail) agents.add(c.agentEmail); });
+        const sortedAgents = Array.from(agents).sort();
+
+        let optionsHtml = '<option value="">Tous les collaborateurs</option>';
+        sortedAgents.forEach(a => { optionsHtml += `<option value="${a}">${a}</option>`; });
+        select.innerHTML = optionsHtml;
+        select.value = window.selectedCollab || "";
+
+        let listHtml = `
+            <div onclick="window.selectCustomOption('')" class="p-3 hover:bg-orange-50 cursor-pointer flex items-center gap-3 transition-colors group ${window.selectedCollab === '' ? 'bg-orange-50/50' : ''}">
+                <div class="w-8 h-8 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center font-bold border border-gray-200 group-hover:bg-white group-hover:border-orange-200 group-hover:text-orange-500"><i class="ph ph-users"></i></div>
+                <span class="text-sm font-medium text-gray-700">Tous les collaborateurs</span>
+                ${window.selectedCollab === '' ? '<i class="ph ph-check text-orange-500 ml-auto"></i>' : ''}
+            </div>`;
+
+        sortedAgents.forEach(email => {
+            const name = email.split('@')[0].replace('.', ' ');
+            const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+            const isSelected = window.selectedCollab === email;
+            const colors = ['bg-blue-100 text-blue-600', 'bg-green-100 text-green-600', 'bg-purple-100 text-purple-600', 'bg-pink-100 text-pink-600', 'bg-yellow-100 text-yellow-600'];
+            const colorClass = colors[name.length % colors.length];
+
+            listHtml += `
+                <div onclick="window.selectCustomOption('${email}')" data-search="${name.toLowerCase()}" class="collab-item p-3 hover:bg-orange-50 cursor-pointer flex items-center gap-3 transition-colors group ${isSelected ? 'bg-orange-50/50' : ''}">
+                    <div class="w-8 h-8 rounded-full ${colorClass} flex items-center justify-center text-xs font-bold border border-transparent group-hover:border-orange-200">${initials}</div>
+                    <div class="flex flex-col">
+                        <span class="text-sm font-bold text-gray-700 capitalize">${name}</span>
+                        <span class="text-[10px] text-gray-400">${email}</span>
+                    </div>
+                    ${isSelected ? '<i class="ph ph-check text-orange-500 ml-auto font-bold"></i>' : ''}
+                </div>`;
+        });
+        container.innerHTML = listHtml;
+        window.updateTriggerDisplay();
+    };
+
+    window.toggleCollabDropdown = function(e) {
+        if(e) { e.preventDefault(); e.stopPropagation(); }
+        const dd = document.getElementById('collab-dropdown');
+        const inp = document.getElementById('collab-search-input');
+        dd.classList.toggle('hidden');
+        if(!dd.classList.contains('hidden')) { inp.value = ""; window.filterCustomList(""); setTimeout(() => inp.focus(), 100); }
+    };
+
+    document.addEventListener('click', function(e) {
+        const wrap = document.getElementById('custom-collab-wrapper');
+        const dd = document.getElementById('collab-dropdown');
+        if (wrap && !wrap.contains(e.target) && !dd.classList.contains('hidden')) { dd.classList.add('hidden'); }
+    });
+
+    window.selectCustomOption = function(val) {
+        window.selectedCollab = val;
+        const select = document.getElementById('filter-collab');
+        if(select) select.value = val;
+        if(window.setCollabFilter) window.setCollabFilter(val);
+        window.updateTriggerDisplay();
+        document.getElementById('collab-dropdown').classList.add('hidden');
+        window.populateCollabList();
+    };
+
+    window.updateTriggerDisplay = function() {
+        const display = document.getElementById('collab-display');
+        const avatar = document.getElementById('collab-avatar');
+        if (!window.selectedCollab) {
+            display.innerText = "Tous";
+            avatar.className = "w-8 h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-xs font-bold shrink-0 border border-orange-200";
+            avatar.innerHTML = '<i class="ph ph-users"></i>';
+        } else {
+            const name = window.selectedCollab.split('@')[0].replace('.', ' ');
+            const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+            const colors = ['bg-blue-100 text-blue-600', 'bg-green-100 text-green-600', 'bg-purple-100 text-purple-600', 'bg-pink-100 text-pink-600', 'bg-yellow-100 text-yellow-600'];
+            const colorClass = colors[name.length % colors.length];
+            display.innerText = name;
+            display.style.textTransform = 'capitalize';
+            avatar.className = `w-8 h-8 rounded-full ${colorClass} flex items-center justify-center text-xs font-bold shrink-0 border border-transparent shadow-sm`;
+            avatar.innerText = initials;
+        }
+    };
+
+    window.filterCustomList = function(text) {
+        const val = text.toLowerCase();
+        document.querySelectorAll('.collab-item').forEach(item => {
+            const name = item.getAttribute('data-search');
+            if(name.includes(val)) { item.classList.remove('hidden'); item.classList.add('flex'); }
+            else { item.classList.add('hidden'); item.classList.remove('flex'); }
+        });
+    };
+    window.handleNativeChange = function(val) { window.selectCustomOption(val); };
+    </script>
+<style>.scrollbar-thin::-webkit-scrollbar { width: 6px; } .scrollbar-thin::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }</style>
+
+<script>
+    // --- FIX FINAL : RESET ETAT BOUTON SUPPRESSION ---
+    // Surcharge la fonction pour garantir le reset du bouton à l'ouverture
+    window.originalConfirmDelete = window.confirmDelete;
     
+    window.confirmDelete = function() {
+        if(!window.currentEditingId) { alert("Erreur ID"); return; }
+        const call = (window.calls || []).find(c => c.firestoreId === window.currentEditingId);
+        
+        const codeSpan = document.getElementById('del-target-code');
+        const inputVerif = document.getElementById('del-verification-input');
+        const modal = document.getElementById('deleteSecurityModal');
+        
+        if(codeSpan) codeSpan.innerText = call ? (call.code || '???') : '???';
+        if(inputVerif) inputVerif.value = "";
+        
+        // --- LE FIX EST ICI : RESET TOTAL DU BOUTON ---
+        const btn = document.querySelector('#deleteSecurityModal button[onclick="window.triggerFinalDelete()"]');
+        if(btn) {
+            btn.disabled = false;
+            btn.innerHTML = 'Confirmer la suppression';
+            btn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+        
+        if(modal) {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+    };
+    </script>
 </body>
 </html>
